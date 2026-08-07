@@ -18,8 +18,8 @@ export async function onRequestGet(context) {
 
 function getUploadType(fileName) {
   const ext = fileName.toLowerCase().split('.').pop() || ''
-  const videoExts = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp']
-  return videoExts.includes(ext) ? 'files' : 'imgs'
+  const mediaExts = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp', 'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac']
+  return mediaExts.includes(ext) ? 'files' : 'imgs'
 }
 
 function sanitizeFileName(fileName) {
