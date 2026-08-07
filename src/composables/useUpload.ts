@@ -24,10 +24,12 @@ export interface CompressResult {
 
 const API_BASE = '/api'
 
+const VIDEO_EXTS = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp', 'avi']
+const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac']
+
 function getUploadType(fileName: string): string {
   const ext = fileName.toLowerCase().split('.').pop() || ''
-  const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp']
-  return videoExts.includes(ext) ? 'files' : 'imgs'
+  return VIDEO_EXTS.includes(ext) || AUDIO_EXTS.includes(ext) ? 'files' : 'imgs'
 }
 
 function isImageFile(file: File): boolean {
@@ -68,25 +70,22 @@ async function compressImage(
         }
         ctx.drawImage(img, 0, 0, width, height)
 
-        const keepPng = file.type === 'image/png'
         canvas.toBlob(
           (blob) => {
             if (!blob) {
               reject(new Error('图片压缩失败'))
               return
             }
-            const ext = keepPng ? 'png' : file.name.toLowerCase().split('.').pop() || 'jpg'
-            const type = keepPng ? 'image/png' : file.type || 'image/jpeg'
-            const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.' + ext), {
-              type,
+            const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.webp'), {
+              type: 'image/webp',
             })
             resolve({
               file: compressedFile,
               compressed: true,
             })
           },
-          file.type === 'image/png' ? 'image/png' : 'image/jpeg',
-          keepPng ? 1 : 0.95,
+          'image/webp',
+          0.85,
         )
       }
       img.onerror = () => reject(new Error('图片加载失败'))
@@ -210,11 +209,16 @@ export function useUpload() {
       const mediaPath = extractMediaPath(sign.assets.path)
       const mainUrl = baseUrl + '/img-api/' + mediaPath
 
+      const ext = file.name.toLowerCase().split('.').pop() || 'mp4'
       const record = {
         url: mainUrl,
         name: file.name,
         size: uploadFile.size,
-        type: getUploadType(file.name) === 'files' ? 'video/' + (file.name.toLowerCase().split('.').pop() || 'mp4') : (uploadFile.type || 'image/jpeg'),
+        type: AUDIO_EXTS.includes(ext)
+          ? 'audio/' + ext
+          : VIDEO_EXTS.includes(ext)
+            ? 'video/' + ext
+            : (uploadFile.type || 'image/jpeg'),
         key: sign.assets.path,
         originalSize,
         compressed,
