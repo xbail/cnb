@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { formatFileSize, copyToClipboard } from '@/lib/utils'
 
@@ -17,13 +17,28 @@ interface Props {
 const props = defineProps<Props>()
 const copiedType = ref<string | null>(null)
 
+const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp']
+function isVideoFile(): boolean {
+  if (props.type.startsWith('video/')) return true
+  const ext = props.name.toLowerCase().split('.').pop() || ''
+  return videoExts.includes(ext)
+}
+
 async function handleCopy(type: string) {
   const url = props.url
   let content = url
   if (type === 'markdown') {
-    content = `![${props.name}](${url})`
+    if (isVideoFile()) {
+      content = `<video src="${url}" controls></video>`
+    } else {
+      content = `![${props.name}](${url})`
+    }
   } else if (type === 'html') {
-    content = `<img src="${url}" alt="${props.name}" />`
+    if (isVideoFile()) {
+      content = `<video src="${url}" controls></video>`
+    } else {
+      content = `<img src="${url}" alt="${props.name}" />`
+    }
   }
   
   await copyToClipboard(content)
@@ -36,8 +51,18 @@ async function handleCopy(type: string) {
   <div class="glass-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
     <div class="aspect-video bg-surface-elevated flex items-center justify-center">
       <img
+        v-if="!isVideoFile()"
         :src="url"
         :alt="name"
+        class="max-w-full max-h-full object-contain"
+      />
+      <video
+        v-else
+        :src="url"
+        :poster="thumbnailUrl"
+        controls
+        preload="metadata"
+        playsinline
         class="max-w-full max-h-full object-contain"
       />
     </div>

@@ -30,15 +30,6 @@ interface ThumbnailResult {
 
 const API_BASE = '/api'
 
-function extractMediaPath(url: string): string {
-  if (url.includes('-/imgs/')) {
-    return url.split('-/imgs/')[1]
-  } else if (url.includes('-/files/')) {
-    return url.split('-/files/')[1]
-  }
-  return url
-}
-
 function isImageFile(file: File): boolean {
   return file.type.startsWith('image/')
 }
@@ -113,7 +104,7 @@ async function generateThumbnailImage(
   })
 }
 
-async function generateVideoThumbnail(file: File): Promise<string | null> {
+async function generateVideoThumbnail(file: File): Promise<Blob | null> {
   return new Promise((resolve) => {
     const video = document.createElement('video')
     video.preload = 'metadata'
@@ -121,6 +112,11 @@ async function generateVideoThumbnail(file: File): Promise<string | null> {
 
     const url = URL.createObjectURL(file)
     video.src = url
+
+    const done = (blob: Blob | null) => {
+      URL.revokeObjectURL(url)
+      resolve(blob)
+    }
 
     video.onloadedmetadata = () => {
       video.currentTime = 0.1
@@ -131,28 +127,95 @@ async function generateVideoThumbnail(file: File): Promise<string | null> {
         canvas.height = video.videoHeight || 240
 
         const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-          const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8)
-          URL.revokeObjectURL(url)
-          resolve(thumbnailDataUrl)
-        } else {
-          URL.revokeObjectURL(url)
-          resolve(null)
+        if (!ctx) {
+          done(null)
+          return
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        canvas.toBlob(
+          (blob) => done(blob),
+          'image/jpeg',
+          0.8,
+        )
+      }
+
+      video.onerror = () => done(null)
+    }
+
+    video.onerror = () => done(null)
+  })
+}
+
+async function signUpload(name: string, contentType: string): Promise<{ upload_url: string; key: string; name: string }> {
+  const res = await fetch(`${API_BASE}/upload/sign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, contentType }),
+  })
+
+  if (!res.ok) {
+    let errorMsg = `获取签名失败: ${res.status}`
+    try {
+      const data = await res.json()
+      errorMsg = data.msg || errorMsg
+    } catch {}
+    throw new Error(errorMsg)
+  }
+
+  const data = await res.json()
+  if (data.code !== 0) {
+    throw new Error(data.msg || '获取签名失败')
+  }
+
+  return data.data
+}
+
+async function putWithProgress(url: string, body: BodyInit, contentType: string, onProgress?: (pct: number) => void): Promise<void> {
+  if (onProgress && typeof XMLHttpRequest !== 'undefined' && body instanceof Blob) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open('PUT', url)
+      xhr.setRequestHeader('Content-Type', contentType)
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onProgress(Math.round((e.loaded / e.total) * 100))
         }
       }
-
-      video.onerror = () => {
-        URL.revokeObjectURL(url)
-        resolve(null)
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) resolve()
+        else reject(new Error(`上传失败: ${xhr.status}`))
       }
-    }
+      xhr.onerror = () => reject(new Error('上传失败: 网络错误'))
+      xhr.send(body)
+    })
+  }
 
-    video.onerror = () => {
-      URL.revokeObjectURL(url)
-      resolve(null)
-    }
+  const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body })
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    throw new Error(`上传失败: ${res.status} ${errText}`)
+  }
+}
+
+async function confirmUpload(payload: {
+  key: string
+  name: string
+  size: number
+  type: string
+  thumbKey: string
+  createdAt: string
+}): Promise<{ key: string; url: string }> {
+  const res = await fetch(`${API_BASE}/upload/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   })
+
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.code !== 0) {
+    throw new Error(data.msg || `保存记录失败: ${res.status}`)
+  }
+  return data.data
 }
 
 export function useUpload() {
@@ -179,148 +242,80 @@ export function useUpload() {
 
     try {
       let thumbResult: ThumbnailResult | null = null
+      let videoThumbBlob: Blob | null = null
 
-      if (isImageFile(file)) {
-        if (generateThumbnail) {
-          processing.value = true
-          try {
-            thumbResult = await generateThumbnailImage(
-              file,
-              thumbnailMaxWidth,
-              thumbnailMaxHeight,
-              thumbnailQuality,
-            )
-          } catch (thumbErr) {
-            console.warn('缩略图生成失败:', thumbErr)
-          } finally {
-            processing.value = false
-          }
-        }
-      }
-
-      progress.value = 10
-
-      console.log('[Upload] Step 1: Getting signature...')
-      console.log(
-        '[Upload] File:',
-        file.name,
-        (file.size / 1024).toFixed(1) + 'KB',
-        file.type,
-      )
-
-      const signRes = await fetch(
-        `${API_BASE}/upload/sign?name=${encodeURIComponent(file.name)}&size=${file.size}&type=${encodeURIComponent(file.type || 'image/png')}`,
-        { method: 'GET' },
-      )
-
-      console.log('[Upload] Signature response status:', signRes.status)
-
-      if (!signRes.ok) {
-        let errorMsg = `获取签名失败: ${signRes.status}`
+      if (isImageFile(file) && generateThumbnail) {
+        processing.value = true
         try {
-          const data = await signRes.json()
-          console.log('[Upload] Signature error data:', data)
-          errorMsg = data.msg || errorMsg
-        } catch {}
-        throw new Error(errorMsg)
-      }
-
-      const signData = await signRes.json()
-      console.log('[Upload] Signature data:', signData)
-
-      if (signData.code !== 0) {
-        throw new Error(signData.msg || '获取签名失败')
-      }
-
-      const { upload_url, assets, safeFileName } = signData.data
-      console.log('[Upload] Got upload URL:', upload_url, 'safeFileName:', safeFileName)
-
-      progress.value = 30
-
-      console.log('[Upload] Step 2: Uploading to CNB (via proxy)...')
-      const putRes = await fetch(
-        `${API_BASE}/upload/put?upload_url=${encodeURIComponent(upload_url)}`,
-        { method: 'POST', body: file },
-      )
-
-      console.log('[Upload] PUT response status:', putRes.status)
-
-      if (!putRes.ok) {
-        const errText = await putRes.text().catch(() => '')
-        console.log('[Upload] PUT error:', errText)
-        throw new Error(`文件上传失败: ${putRes.status} ${errText}`)
-      }
-
-      progress.value = 50
-
-      let thumbnailUrl: string | null = null
-
-      if (thumbResult) {
-        console.log('[Upload] Step 3: Uploading image thumbnail...')
-        const thumbName = file.name.replace(/\.\w+$/, '_thumb.webp')
-        const thumbSignRes = await fetch(
-          `${API_BASE}/upload/sign?name=${encodeURIComponent(thumbName)}&size=${thumbResult.thumbnailFile.size}&type=image/webp`,
-          { method: 'GET' },
-        )
-
-        if (thumbSignRes.ok) {
-          const thumbSignData = await thumbSignRes.json()
-          if (thumbSignData.code === 0) {
-            const { upload_url: thumbUploadUrl } = thumbSignData.data
-            const thumbPutRes = await fetch(
-              `${API_BASE}/upload/put?upload_url=${encodeURIComponent(thumbUploadUrl)}`,
-              { method: 'POST', body: thumbResult.thumbnailFile },
-            )
-
-            if (thumbPutRes.ok) {
-              const baseUrl = window.location.origin
-              const mediaPath = extractMediaPath(thumbSignData.data.assets.path)
-              thumbnailUrl = baseUrl + '/img-api/' + mediaPath
-              console.log('[Upload] Image thumbnail uploaded:', thumbnailUrl)
-            }
-          }
+          thumbResult = await generateThumbnailImage(
+            file,
+            thumbnailMaxWidth,
+            thumbnailMaxHeight,
+            thumbnailQuality,
+          )
+        } catch (thumbErr) {
+          console.warn('缩略图生成失败:', thumbErr)
+        } finally {
+          processing.value = false
         }
       } else if (isVideo(file)) {
-        console.log('[Upload] Step 3: Generating video thumbnail...')
-        const thumbnailDataUrl = await generateVideoThumbnail(file)
-        if (thumbnailDataUrl) {
-          const thumbnailBlob = await fetch(thumbnailDataUrl).then((res) => res.blob())
-          const thumbnailName = safeFileName.replace(/\.[^.]+$/, '_thumb.jpg')
-
-          const thumbSignRes = await fetch(
-            `${API_BASE}/upload/sign?name=${encodeURIComponent(thumbnailName)}&size=${thumbnailBlob.size}&type=image/jpeg`,
-            { method: 'GET' },
-          )
-
-          if (thumbSignRes.ok) {
-            const thumbSignData = await thumbSignRes.json()
-            if (thumbSignData.code === 0) {
-              const { upload_url: thumbUploadUrl } = thumbSignData.data
-              const thumbPutRes = await fetch(
-                `${API_BASE}/upload/put?upload_url=${encodeURIComponent(thumbUploadUrl)}`,
-                { method: 'POST', body: thumbnailBlob },
-              )
-
-              if (thumbPutRes.ok) {
-                const baseUrl = window.location.origin
-                const mediaPath = extractMediaPath(thumbSignData.data.assets.path)
-                thumbnailUrl = baseUrl + '/img-api/' + mediaPath
-                console.log('[Upload] Video thumbnail uploaded:', thumbnailUrl)
-              }
-            }
-          }
+        processing.value = true
+        try {
+          videoThumbBlob = await generateVideoThumbnail(file)
+        } catch (thumbErr) {
+          console.warn('视频缩略图生成失败:', thumbErr)
+        } finally {
+          processing.value = false
         }
       }
 
-      progress.value = 80
+      progress.value = 5
 
-      console.log('[Upload] Step 4: Saving record...')
+      const sign = await signUpload(file.name, file.type || 'application/octet-stream')
+      console.log('[Upload] Signed:', sign)
+
+      progress.value = 10
+      const mainContentType = file.type || 'application/octet-stream'
+      await putWithProgress(sign.upload_url, file, mainContentType, (pct) => {
+        progress.value = 10 + Math.round(pct * 0.7)
+      })
+
+      progress.value = 85
+
+      let thumbKey = ''
+
+      if (thumbResult) {
+        try {
+          const thumbSign = await signUpload(thumbResult.thumbnailFile.name, 'image/webp')
+          await putWithProgress(thumbSign.upload_url, thumbResult.thumbnailFile, 'image/webp')
+          thumbKey = thumbSign.key
+        } catch (thumbErr) {
+          console.warn('图片缩略图上传失败:', thumbErr)
+        }
+      } else if (videoThumbBlob) {
+        try {
+          const thumbName = file.name.replace(/\.[^.]+$/, '_thumb.jpg')
+          const thumbSign = await signUpload(thumbName, 'image/jpeg')
+          await putWithProgress(thumbSign.upload_url, videoThumbBlob, 'image/jpeg')
+          thumbKey = thumbSign.key
+        } catch (thumbErr) {
+          console.warn('视频缩略图上传失败:', thumbErr)
+        }
+      }
+
+      const confirmed = await confirmUpload({
+        key: sign.key,
+        name: file.name,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+        thumbKey,
+        createdAt: new Date().toISOString(),
+      })
+
       const baseUrl = window.location.origin
-      const mediaPath = extractMediaPath(assets.path)
-      const mainUrl = baseUrl + '/img-api/' + mediaPath
-      console.log('[Upload] Main URL:', mainUrl)
+      const mainUrl = baseUrl + confirmed.url
+      const thumbnailUrl = thumbKey ? baseUrl + '/api/file?key=' + encodeURIComponent(thumbKey) : undefined
 
-      // 保存记录到 localStorage
       saveImage({
         url: mainUrl,
         thumbnailUrl: thumbnailUrl || undefined,
@@ -330,7 +325,6 @@ export function useUpload() {
       })
 
       progress.value = 100
-      console.log('[Upload] Complete!')
 
       return {
         url: mainUrl,

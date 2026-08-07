@@ -27,13 +27,13 @@ function handleCopy(type: string) {
   let content = url
   if (type === 'markdown') {
     if (isVideo(props.image)) {
-      content = `![${props.image.name}](${url})`
+      content = `<video src="${url}" controls></video>`
     } else {
       content = `![${props.image.name}](${url})`
     }
   } else if (type === 'html') {
     if (isVideo(props.image)) {
-      content = `<img src="${url}" alt="${props.image.name}" />`
+      content = `<video src="${url}" controls></video>`
     } else {
       content = `<img src="${url}" alt="${props.image.name}" />`
     }
