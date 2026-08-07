@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { formatFileSize, copyToClipboard } from '@/lib/utils'
 
@@ -68,7 +68,7 @@ async function handleCopy(type: string) {
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary mt-1.5">
         <p v-if="compressed && originalSize">
           {{ formatFileSize(originalSize) }} → <span class="gradient-text font-bold">{{ formatFileSize(size) }}</span>
-          <span class="ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-medium">已压缩</span>
+          <span class="ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-medium">已压缩 · 无损</span>
         </p>
         <p v-else>{{ formatFileSize(size) }} · {{ type }}</p>
       </div>
