@@ -114,7 +114,7 @@ onUnmounted(() => {
           <svg class="w-24 h-24 gradient-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 6l12-3" />
           </svg>
-          <audio :src="image.url" controls class="w-full max-w-xl" preload="metadata" />
+          <audio :src="image.url" controls class="w-full max-w-xl min-w-[280px] min-h-[48px]" preload="metadata" />
         </div>
         <div v-else-if="isVideo(image)" class="relative">
           <video
