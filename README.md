@@ -55,20 +55,19 @@ GET /api/upload/sign?name=example.png&size=10240
 - 缺少参数：`{ "code": 400, "msg": "missing name or size param" }`
 - 成功：`{ "code": 0, "data": { "upload_url": "...", "assets": {...}, "safeFileName": "..." } }`
 
-### 3. 上传文件（PUT 到对象存储）
+### 3. 上传文件（浏览器直传 CNB 对象存储）
 
-获取签名后，将文件二进制作为请求体传入 `upload_url`。
+获取签名后，浏览器**直接 PUT** 文件二进制到返回的 `upload_url`，**不经过本站 EdgeOne 函数中转**（EdgeOne Edge Functions 请求 body 限制仅 1MB，中转会导致大文件 500；直传无此限制）。
 
 ```
-POST /api/upload/put?upload_url=<sign返回的upload_url>
+PUT <sign返回的upload_url>
 Content-Type: application/octet-stream
 
 <文件二进制>
 ```
 
-- 成功：`{ "code": 0, "msg": "ok" }`
-- 缺少参数：`{ "code": 400, "msg": "missing upload_url param" }`
-- 对象存储上传失败：返回 `502`，错误信息在 `data.message` 中
+- 成功：HTTP `2xx`，返回对象存储响应
+- 上传失败：`xhr.status` 非 `2xx`，错误详情在响应体中
 
 ### 4. 获取文件列表
 
