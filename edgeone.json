@@ -1,13 +1,3 @@
 {
-  "routing": [
-    {
-      "route": "/api/*",
-      "target": "./node-functions/api"
-    },
-    {
-      "route": "/img-api/*",
-      "target": "./edge-functions/img-api"
-    }
-  ],
   "outputDirectory": "./dist"
 }
