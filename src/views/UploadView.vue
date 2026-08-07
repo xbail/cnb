@@ -56,7 +56,7 @@ function getUploadProgress() {
         </div>
         <h1 class="text-4xl sm:text-5xl font-bold gradient-text tracking-tight">CNB 图床</h1>
         <p class="text-text-secondary mt-4 text-base leading-relaxed">
-          上传图片或视频，获取永久直链，随处分享
+          上传图片、视频或音频，获取永久直链，随处分享
         </p>
       </div>
 
@@ -75,7 +75,7 @@ function getUploadProgress() {
             </div>
             <div>
               <p class="text-sm font-semibold text-text-primary">图片压缩</p>
-              <p class="text-xs text-text-secondary mt-0.5">超大图片自动等比缩小（超过 1920×1080），无损保留画质、格式不变（GIF 动图除外）</p>
+              <p class="text-xs text-text-secondary mt-0.5">超大图片自动等比缩小并转为 WebP 格式（GIF 动图除外）</p>
             </div>
           </div>
           <button
