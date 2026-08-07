@@ -15,7 +15,6 @@ export interface UploadOptions {
   compress?: boolean
   maxWidth?: number
   maxHeight?: number
-  quality?: number
 }
 
 export interface CompressResult {
@@ -39,7 +38,6 @@ async function compressImage(
   file: File,
   maxWidth: number,
   maxHeight: number,
-  quality: number,
 ): Promise<CompressResult> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -51,11 +49,14 @@ async function compressImage(
         let width = img.width
         let height = img.height
 
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height)
-          width = Math.round(width * ratio)
-          height = Math.round(height * ratio)
+        if (width <= maxWidth && height <= maxHeight) {
+          resolve({ file, compressed: false })
+          return
         }
+
+        const ratio = Math.min(maxWidth / width, maxHeight / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
 
         const canvas = document.createElement('canvas')
         canvas.width = width
@@ -67,24 +68,25 @@ async function compressImage(
         }
         ctx.drawImage(img, 0, 0, width, height)
 
+        const keepPng = file.type === 'image/png'
         canvas.toBlob(
           (blob) => {
             if (!blob) {
               reject(new Error('图片压缩失败'))
               return
             }
-            const isPng = file.type === 'image/png'
-            const ext = isPng ? 'png' : 'jpg'
+            const ext = keepPng ? 'png' : file.name.toLowerCase().split('.').pop() || 'jpg'
+            const type = keepPng ? 'image/png' : file.type || 'image/jpeg'
             const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.' + ext), {
-              type: isPng ? 'image/png' : 'image/jpeg',
+              type,
             })
             resolve({
               file: compressedFile,
-              compressed: compressedFile.size < file.size,
+              compressed: true,
             })
           },
           file.type === 'image/png' ? 'image/png' : 'image/jpeg',
-          quality,
+          keepPng ? 1 : 0.95,
         )
       }
       img.onerror = () => reject(new Error('图片加载失败'))
@@ -168,7 +170,6 @@ export function useUpload() {
       compress = false,
       maxWidth = 1920,
       maxHeight = 1080,
-      quality = 0.8,
     } = options
 
     uploading.value = true
@@ -183,7 +184,7 @@ export function useUpload() {
       if (compress && isImageFile(file)) {
         processing.value = true
         try {
-          const result = await compressImage(file, maxWidth, maxHeight, quality)
+          const result = await compressImage(file, maxWidth, maxHeight)
           uploadFile = result.file
           compressed = result.compressed
         } catch (e) {
