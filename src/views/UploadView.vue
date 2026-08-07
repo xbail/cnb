@@ -8,7 +8,6 @@ import { useUpload, type UploadResult } from '@/composables/useUpload'
 const { uploading, progress, error, processing, upload } = useUpload()
 
 const compressEnabled = ref(true)
-const compressQuality = ref(0.8)
 
 const uploadedFiles = ref<UploadResult[]>([])
 const uploadQueue = ref<File[]>([])
@@ -28,7 +27,6 @@ async function handleFiles(files: File[]) {
       compress: compressEnabled.value,
       maxWidth: 1920,
       maxHeight: 1080,
-      quality: compressQuality.value,
     })
     if (result) {
       uploadedFiles.value.unshift(result)
@@ -77,7 +75,7 @@ function getUploadProgress() {
             </div>
             <div>
               <p class="text-sm font-semibold text-text-primary">图片压缩</p>
-              <p class="text-xs text-text-secondary mt-0.5">上传前压缩图片，减小体积、节省存储（GIF 不动图除外）</p>
+              <p class="text-xs text-text-secondary mt-0.5">超大图片自动等比缩小（超过 1920×1080），无损保留画质、格式不变（GIF 动图除外）</p>
             </div>
           </div>
           <button
@@ -96,18 +94,6 @@ function getUploadProgress() {
               ]"
             />
           </button>
-        </div>
-        <div v-if="compressEnabled" class="mt-3 flex items-center gap-3">
-          <span class="text-xs text-text-secondary shrink-0">压缩质量</span>
-          <input
-            v-model.number="compressQuality"
-            type="range"
-            min="0.3"
-            max="1"
-            step="0.05"
-            class="flex-1 accent-[#6366f1]"
-          />
-          <span class="text-xs font-medium gradient-text shrink-0 w-10 text-right">{{ Math.round(compressQuality * 100) }}%</span>
         </div>
       </div>
 
