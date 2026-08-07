@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref } from 'vue'
 import { formatFileSize, copyToClipboard } from '@/lib/utils'
 
@@ -61,20 +61,20 @@ async function handleCopy(type: string) {
       />
     </div>
 
-    <div class="p-5">
-      <p class="font-semibold text-text-primary truncate text-lg">{{ name }}</p>
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary mt-2">
+    <div class="p-4">
+      <p class="font-semibold text-text-primary truncate text-base">{{ name }}</p>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary mt-1.5">
         <p>{{ formatFileSize(size) }} · {{ type }}</p>
       </div>
 
-      <div class="mt-4 flex items-center gap-2 flex-wrap">
-        <div class="flex-1 px-4 py-3 bg-surface-elevated rounded-xl text-sm text-text-secondary truncate font-mono">
+      <div class="mt-3 flex items-center gap-2">
+        <div class="flex-1 min-w-0 px-3 py-2 bg-surface-elevated rounded-lg text-xs text-text-secondary truncate font-mono">
           {{ url }}
         </div>
         <button
           @click="handleCopy('link')"
           :class="[
-            'px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300',
+            'shrink-0 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-300',
             copiedType === 'link'
               ? 'bg-green-500/20 text-green-500 border border-green-500/30'
               : 'gradient-btn text-white'
@@ -82,10 +82,13 @@ async function handleCopy(type: string) {
         >
           {{ copiedType === 'link' ? '✓ 已复制' : '链接' }}
         </button>
+      </div>
+
+      <div class="mt-2 flex items-center gap-2">
         <button
           @click="handleCopy('markdown')"
           :class="[
-            'px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300',
+            'flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-300',
             copiedType === 'markdown'
               ? 'bg-green-500/20 text-green-500 border border-green-500/30'
               : 'gradient-btn text-white'
@@ -96,7 +99,7 @@ async function handleCopy(type: string) {
         <button
           @click="handleCopy('html')"
           :class="[
-            'px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300',
+            'flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-300',
             copiedType === 'html'
               ? 'bg-green-500/20 text-green-500 border border-green-500/30'
               : 'gradient-btn text-white'
