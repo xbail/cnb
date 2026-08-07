@@ -27,11 +27,6 @@ const API_BASE = '/api'
 const VIDEO_EXTS = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp', 'avi']
 const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac']
 
-function getUploadType(fileName: string): string {
-  const ext = fileName.toLowerCase().split('.').pop() || ''
-  return VIDEO_EXTS.includes(ext) || AUDIO_EXTS.includes(ext) ? 'files' : 'imgs'
-}
-
 function isImageFile(file: File): boolean {
   return file.type.startsWith('image/') && !file.type.startsWith('image/gif')
 }
