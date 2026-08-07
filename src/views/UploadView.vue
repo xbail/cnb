@@ -7,9 +7,14 @@ import { useUpload, type UploadResult } from '@/composables/useUpload'
 
 const { uploading, progress, error, processing, upload } = useUpload()
 
+const compressEnabled = ref(true)
+const compressQuality = ref(0.8)
+
 const uploadedFiles = ref<UploadResult[]>([])
 const uploadQueue = ref<File[]>([])
 const currentUploadIndex = ref(0)
+
+const showApiDocs = ref(false)
 
 async function handleFiles(files: File[]) {
   if (files.length === 0) return
@@ -19,7 +24,12 @@ async function handleFiles(files: File[]) {
 
   for (let i = 0; i < files.length; i++) {
     currentUploadIndex.value = i
-    const result = await upload(files[i])
+    const result = await upload(files[i], {
+      compress: compressEnabled.value,
+      maxWidth: 1920,
+      maxHeight: 1080,
+      quality: compressQuality.value,
+    })
     if (result) {
       uploadedFiles.value.unshift(result)
     }
@@ -53,6 +63,53 @@ function getUploadProgress() {
       </div>
 
       <DropZone @files="handleFiles" />
+
+      <div class="mt-4 glass-card rounded-2xl p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-9 h-9 rounded-xl flex items-center justify-center"
+              :class="compressEnabled ? 'gradient-btn' : 'bg-surface-elevated'"
+            >
+              <svg class="w-5 h-5" :class="compressEnabled ? 'text-white' : 'text-text-secondary'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-text-primary">图片压缩</p>
+              <p class="text-xs text-text-secondary mt-0.5">上传前压缩图片，减小体积、节省存储（GIF 不动图除外）</p>
+            </div>
+          </div>
+          <button
+            @click="compressEnabled = !compressEnabled"
+            :class="[
+              'relative w-12 h-7 rounded-full transition-all duration-300',
+              compressEnabled ? 'gradient-btn' : 'bg-surface-elevated'
+            ]"
+            role="switch"
+            :aria-checked="compressEnabled"
+          >
+            <span
+              :class="[
+                'absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all duration-300',
+                compressEnabled ? 'left-6' : 'left-1'
+              ]"
+            />
+          </button>
+        </div>
+        <div v-if="compressEnabled" class="mt-3 flex items-center gap-3">
+          <span class="text-xs text-text-secondary shrink-0">压缩质量</span>
+          <input
+            v-model.number="compressQuality"
+            type="range"
+            min="0.3"
+            max="1"
+            step="0.05"
+            class="flex-1 accent-[#6366f1]"
+          />
+          <span class="text-xs font-medium gradient-text shrink-0 w-10 text-right">{{ Math.round(compressQuality * 100) }}%</span>
+        </div>
+      </div>
 
       <div v-if="processing" class="mt-5 glass-card rounded-2xl p-4">
         <div class="flex items-center gap-2 text-sm text-text-secondary">
@@ -104,7 +161,58 @@ function getUploadProgress() {
             :name="file.name"
             :size="file.size"
             :type="file.type"
+            :original-size="file.originalSize"
+            :compressed="file.compressed"
           />
+        </div>
+      </div>
+      <div class="mt-10 glass-card rounded-2xl overflow-hidden">
+        <button
+          @click="showApiDocs = !showApiDocs"
+          class="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-surface-elevated/50"
+        >
+          <span class="flex items-center gap-2 font-semibold text-text-primary">
+            <svg class="w-5 h-5 gradient-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            API 接口文档
+          </span>
+          <svg
+            :class="['w-5 h-5 text-text-secondary transition-transform duration-300', showApiDocs ? 'rotate-180' : '']"
+            fill="none" viewBox="0 0 24 24" stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div v-if="showApiDocs" class="px-5 pb-5 space-y-3">
+          <p class="text-xs text-text-secondary">统一返回 <code class="text-accent font-mono">{"code":0,"msg":"ok","data":...}</code>，<code class="text-accent font-mono">code</code> 为 0 表示成功。</p>
+
+          <div class="space-y-4">
+            <div>
+              <p class="font-mono text-xs text-accent mb-1">POST /api/auth/verify</p>
+              <p class="text-xs text-text-secondary">验证访问密码，body: <code class="font-mono">{"password":"xxx"}</code></p>
+            </div>
+            <div>
+              <p class="font-mono text-xs text-accent mb-1">GET /api/upload/sign?name=x.png&size=10240</p>
+              <p class="text-xs text-text-secondary">获取上传签名，返回 <code class="font-mono">upload_url</code>（含随机重命名的文件名）</p>
+            </div>
+            <div>
+              <p class="font-mono text-xs text-accent mb-1">POST /api/upload/put?upload_url=&lt;签名返回&gt;</p>
+              <p class="text-xs text-text-secondary">上传文件，请求体为文件二进制（Content-Type: application/octet-stream）</p>
+            </div>
+            <div>
+              <p class="font-mono text-xs text-accent mb-1">GET /api/files</p>
+              <p class="text-xs text-text-secondary">获取文件列表（按创建时间倒序）</p>
+            </div>
+            <div>
+              <p class="font-mono text-xs text-accent mb-1">DELETE /api/file?path=&lt;key&gt;</p>
+              <p class="text-xs text-text-secondary">按 key（含 /-/imgs/ 或 /-/files/）删除文件</p>
+            </div>
+            <div>
+              <p class="font-mono text-xs text-accent mb-1">GET /img-api/&lt;mediaPath&gt;</p>
+              <p class="text-xs text-text-secondary">访问图片/视频直链（CDN 加速，支持 Range 播放）</p>
+            </div>
+          </div>
         </div>
       </div>
     </main>

@@ -7,6 +7,8 @@ interface Props {
   name: string
   size: number
   type: string
+  originalSize?: number
+  compressed?: boolean
 }
 
 const props = defineProps<Props>()
@@ -64,7 +66,11 @@ async function handleCopy(type: string) {
     <div class="p-4">
       <p class="font-semibold text-text-primary truncate text-base">{{ name }}</p>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary mt-1.5">
-        <p>{{ formatFileSize(size) }} · {{ type }}</p>
+        <p v-if="compressed && originalSize">
+          {{ formatFileSize(originalSize) }} → <span class="gradient-text font-bold">{{ formatFileSize(size) }}</span>
+          <span class="ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-medium">已压缩</span>
+        </p>
+        <p v-else>{{ formatFileSize(size) }} · {{ type }}</p>
       </div>
 
       <div class="mt-3 flex items-center gap-2">

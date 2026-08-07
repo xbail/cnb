@@ -7,13 +7,20 @@ export interface UploadResult {
   size: number
   type: string
   key: string
+  originalSize?: number
+  compressed?: boolean
 }
 
 export interface UploadOptions {
-  generateThumbnail?: boolean
-  thumbnailMaxWidth?: number
-  thumbnailMaxHeight?: number
-  thumbnailQuality?: number
+  compress?: boolean
+  maxWidth?: number
+  maxHeight?: number
+  quality?: number
+}
+
+export interface CompressResult {
+  file: File
+  compressed: boolean
 }
 
 const API_BASE = '/api'
@@ -22,6 +29,68 @@ function getUploadType(fileName: string): string {
   const ext = fileName.toLowerCase().split('.').pop() || ''
   const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp']
   return videoExts.includes(ext) ? 'files' : 'imgs'
+}
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith('image/') && !file.type.startsWith('image/gif')
+}
+
+async function compressImage(
+  file: File,
+  maxWidth: number,
+  maxHeight: number,
+  quality: number,
+): Promise<CompressResult> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (e) => {
+      const img = new Image()
+      img.src = e.target?.result as string
+      img.onload = () => {
+        let width = img.width
+        let height = img.height
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('无法获取 canvas context'))
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('图片压缩失败'))
+              return
+            }
+            const isPng = file.type === 'image/png'
+            const ext = isPng ? 'png' : 'jpg'
+            const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.' + ext), {
+              type: isPng ? 'image/png' : 'image/jpeg',
+            })
+            resolve({
+              file: compressedFile,
+              compressed: compressedFile.size < file.size,
+            })
+          },
+          file.type === 'image/png' ? 'image/png' : 'image/jpeg',
+          quality,
+        )
+      }
+      img.onerror = () => reject(new Error('图片加载失败'))
+    }
+    reader.onerror = () => reject(new Error('文件读取失败'))
+  })
 }
 
 function extractMediaPath(url: string): string {
@@ -95,19 +164,42 @@ export function useUpload() {
     file: File,
     options: UploadOptions = {},
   ): Promise<UploadResult | null> {
-    void options
+    const {
+      compress = false,
+      maxWidth = 1920,
+      maxHeight = 1080,
+      quality = 0.8,
+    } = options
+
     uploading.value = true
     progress.value = 0
     error.value = ''
 
     try {
+      let uploadFile = file
+      let originalSize = file.size
+      let compressed = false
+
+      if (compress && isImageFile(file)) {
+        processing.value = true
+        try {
+          const result = await compressImage(file, maxWidth, maxHeight, quality)
+          uploadFile = result.file
+          compressed = result.compressed
+        } catch (e) {
+          console.warn('[Upload] 压缩失败,使用原图:', e)
+        } finally {
+          processing.value = false
+        }
+      }
+
       progress.value = 5
 
-      const sign = await signUpload(file.name, file.size)
+      const sign = await signUpload(uploadFile.name, uploadFile.size)
       console.log('[Upload] Signed:', sign)
 
       progress.value = 10
-      await putWithProgress(sign.upload_url, file, (pct) => {
+      await putWithProgress(sign.upload_url, uploadFile, (pct) => {
         progress.value = 10 + Math.round(pct * 0.85)
       })
 
@@ -120,9 +212,11 @@ export function useUpload() {
       const record = {
         url: mainUrl,
         name: file.name,
-        size: file.size,
-        type: getUploadType(file.name) === 'files' ? 'video/' + (file.name.toLowerCase().split('.').pop() || 'mp4') : (file.type || 'image/jpeg'),
+        size: uploadFile.size,
+        type: getUploadType(file.name) === 'files' ? 'video/' + (file.name.toLowerCase().split('.').pop() || 'mp4') : (uploadFile.type || 'image/jpeg'),
         key: sign.assets.path,
+        originalSize,
+        compressed,
       }
 
       saveImage(record)

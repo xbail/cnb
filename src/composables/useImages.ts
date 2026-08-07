@@ -53,7 +53,7 @@ export function useImages() {
     }
   }
 
-  function saveImage(record: { url: string; name: string; size: number; type: string; key: string }) {
+  function saveImage(record: { url: string; name: string; size: number; type: string; key: string; originalSize?: number; compressed?: boolean }) {
     // 文件本体已存 CNB，刷新后通过 /api/files 重新拉取，这里仅作内存即时反馈
     images.value.unshift({
       id: record.key || Date.now().toString(36),
