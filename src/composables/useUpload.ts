@@ -20,6 +20,7 @@ export interface UploadOptions {
 export interface CompressResult {
   file: File
   compressed: boolean
+  resized: boolean
 }
 
 const API_BASE = '/api'
@@ -45,15 +46,14 @@ async function compressImage(
       img.onload = () => {
         let width = img.width
         let height = img.height
+        let resized = false
 
-        if (width <= maxWidth && height <= maxHeight) {
-          resolve({ file, compressed: false })
-          return
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+          resized = true
         }
-
-        const ratio = Math.min(maxWidth / width, maxHeight / height)
-        width = Math.round(width * ratio)
-        height = Math.round(height * ratio)
 
         const canvas = document.createElement('canvas')
         canvas.width = width
@@ -77,6 +77,7 @@ async function compressImage(
             resolve({
               file: compressedFile,
               compressed: true,
+              resized,
             })
           },
           'image/webp',
