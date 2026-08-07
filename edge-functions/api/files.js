@@ -3,6 +3,7 @@ export async function onRequestGet(context) {
     const env = context.env
     const slugImg = env.SLUG_IMG || 'wujinpai/cnbimg'
     const token = env.TOKEN_IMG || ''
+    const origin = new URL(context.request.url).origin
 
     const listUrl = 'https://api.cnb.cool/' + slugImg + '/-/list-assets?page=1&page_size=100'
     const resp = await fetch(listUrl, {
@@ -32,7 +33,7 @@ export async function onRequestGet(context) {
         return {
           id: path,
           key: path,
-          url: '/img-api/' + mediaPath,
+          url: origin + '/img-api/' + mediaPath,
           name: fileName,
           size: a.size_in_byte || 0,
           type,
