@@ -4,6 +4,17 @@ function getMediaType(fileName: string): string {
   return mediaExts.includes(ext) ? 'files' : 'imgs'
 }
 
+function getContentType(fileName: string): string | null {
+  const ext = fileName.toLowerCase().split('.').pop() || ''
+  const map: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    avif: 'image/avif', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v', '3gp': 'video/3gpp',
+    mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac',
+  }
+  return map[ext] || null
+}
+
 export async function onRequest(context: any) {
   const urlPath = context.params.path
   if (!urlPath) {
@@ -48,6 +59,13 @@ export async function onRequest(context: any) {
     headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS, DELETE')
     headers.set('Access-Control-Allow-Headers', 'Range, Content-Type')
     headers.set('Cache-Control', 'public, max-age=31536000')
+
+    const overrideType = getContentType(pathStr)
+    if (overrideType) {
+      headers.set('Content-Type', overrideType)
+    } else if (!headers.has('Content-Type') || headers.get('Content-Type') === 'application/octet-stream') {
+      headers.set('Content-Type', 'application/octet-stream')
+    }
 
     return new Response(resp.body, {
       status: resp.status,
