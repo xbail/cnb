@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { copyToClipboard, formatFileSize, formatDate } from '@/lib/utils'
 import type { ImageRecord } from '@/composables/useImages'
-import { isVideo } from '@/composables/useImages'
+import { isVideo, isAudio } from '@/composables/useImages'
 
 interface Props {
   image: ImageRecord
@@ -20,18 +20,23 @@ const emit = defineEmits<{
 }>()
 
 const copiedType = ref<string | null>(null)
+const videoUnsupported = ref(false)
 
 function handleCopy(type: string) {
   const url = props.image.url
   let content = url
   if (type === 'markdown') {
-    if (isVideo(props.image)) {
+    if (isAudio(props.image)) {
+      content = `<audio src="${url}" controls></audio>`
+    } else if (isVideo(props.image)) {
       content = `<video src="${url}" controls></video>`
     } else {
       content = `![${props.image.name}](${url})`
     }
   } else if (type === 'html') {
-    if (isVideo(props.image)) {
+    if (isAudio(props.image)) {
+      content = `<audio src="${url}" controls></audio>`
+    } else if (isVideo(props.image)) {
       content = `<video src="${url}" controls></video>`
     } else {
       content = `<img src="${url}" alt="${props.image.name}" />`
@@ -41,6 +46,15 @@ function handleCopy(type: string) {
   copyToClipboard(content)
   copiedType.value = type
   setTimeout(() => (copiedType.value = null), 2000)
+}
+
+function handleVideoLoaded(event: Event) {
+  const video = event.target as HTMLVideoElement
+  videoUnsupported.value = video.videoWidth === 0 && video.videoHeight === 0
+}
+
+function handleVideoError() {
+  videoUnsupported.value = true
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -96,14 +110,35 @@ onUnmounted(() => {
       </button>
 
       <div class="max-w-6xl max-h-[85vh] mx-4">
-        <video
-          v-if="isVideo(image)"
-          :src="image.url"
-          controls
-          preload="metadata"
-          playsinline
-          class="max-w-full max-h-[75vh] rounded-2xl bg-black shadow-2xl"
-        />
+        <div v-if="isAudio(image)" class="flex flex-col items-center gap-6 py-16">
+          <svg class="w-24 h-24 gradient-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 6l12-3" />
+          </svg>
+          <audio :src="image.url" controls class="w-full max-w-xl" preload="metadata" />
+        </div>
+        <div v-else-if="isVideo(image)" class="relative">
+          <video
+            :src="image.url"
+            controls
+            preload="metadata"
+            playsinline
+            class="max-w-full max-h-[75vh] rounded-2xl bg-black shadow-2xl"
+            @loadedmetadata="handleVideoLoaded"
+            @error="handleVideoError"
+          />
+          <div
+            v-if="videoUnsupported"
+            class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 rounded-2xl text-center p-8"
+          >
+            <svg class="w-12 h-12 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p class="text-white font-semibold text-lg">视频画面无法播放</p>
+            <p class="text-white/70 text-sm max-w-md">
+              此视频可能使用了浏览器不支持的编码（如 H.265/HEVC）。建议用 Safari / Edge / 移动端打开，或将视频转码为 H.264 后重新上传。
+            </p>
+          </div>
+        </div>
         <img
           v-else
           :src="image.url"
