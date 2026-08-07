@@ -1,7 +1,7 @@
 function getMediaType(fileName: string): string {
   const ext = fileName.toLowerCase().split('.').pop() || ''
-  const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp']
-  return videoExts.includes(ext) ? 'files' : 'imgs'
+  const mediaExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp', 'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac']
+  return mediaExts.includes(ext) ? 'files' : 'imgs'
 }
 
 export async function onRequest(context: any) {
