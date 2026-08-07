@@ -183,8 +183,8 @@ function getUploadProgress() {
               <p class="text-xs text-text-secondary">获取上传签名，返回 <code class="font-mono">upload_url</code>（含随机重命名的文件名）</p>
             </div>
             <div>
-              <p class="font-mono text-xs text-accent mb-1">POST /api/upload/put?upload_url=&lt;签名返回&gt;</p>
-              <p class="text-xs text-text-secondary">上传文件，请求体为文件二进制（Content-Type: application/octet-stream）</p>
+              <p class="font-mono text-xs text-accent mb-1">PUT &lt;签名返回的 upload_url&gt;</p>
+              <p class="text-xs text-text-secondary">浏览器直传文件二进制到 CNB 对象存储（Content-Type: application/octet-stream），不经过本站服务器，无 1MB 限制</p>
             </div>
             <div>
               <p class="font-mono text-xs text-accent mb-1">GET /api/files</p>
