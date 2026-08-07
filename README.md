@@ -1,119 +1,137 @@
-# CNB 鍥惧簥 Pro
+# CNB 图床 Pro
 
-涓€涓畝娲併€佸畨鍏ㄧ殑杞婚噺绾у浘搴婂簲鐢紝鏀寔瀵嗙爜楠岃瘉銆佹嫋鎷戒笂浼犮€佺浉鍐岀鐞嗗拰鍥剧墖棰勮锛岃繍琛屽湪鑵捐浜?EdgeOne Pages 涓婏紝鏂囦欢瀛樺偍鍦?CNB(cnb.cool)瀵硅薄瀛樺偍涓€?
-## 鍔熻兘鐗规€?
-- 馃攼 瀵嗙爜楠岃瘉 - 瀹夊叏璁块棶鎺у埗
-- 馃摛 鎷栨嫿涓婁紶 - 鏀寔鎷栨嫿鎴栫偣鍑讳笂浼狅紝鏀寔澶氭枃浠朵笌涓婁紶杩涘害
-- 馃柤锔?鐩稿唽绠＄悊 - 鍥剧墖/瑙嗛缃戞牸灞曠ず锛屾寜鏃堕棿鍊掑簭锛屾敮鎸佹悳绱?- 馃攳 鍥剧墖棰勮 - 鍏ㄥ睆棰勮锛屾敮鎸侀敭鐩樺鑸紙鈫?/ 鈫?/ Esc锛?- 馃搵 閾炬帴澶嶅埗 - 涓€閿鍒剁洿閾?/ Markdown / HTML 寮曠敤
-- 馃棏锔?鍥剧墖绠＄悊 - 鏀寔鍒犻櫎鏂囦欢
-- 馃寵 涓婚鍒囨崲 - 鏀寔鏄庢殫涓婚
+一个简洁、安全的轻量级图床应用，支持密码验证、拖拽上传、相册管理和图片预览，运行在腾讯云 EdgeOne Pages 上，文件存储在 CNB(cnb.cool)对象存储中。
 
-## 鎶€鏈爤
+## 功能特性
 
-- **鍓嶇**: Vue 3 + TypeScript + Vite + TailwindCSS + Pinia
-- **鍚庣**: Edge Functions锛堣吘璁簯 EdgeOne Pages锛?- **瀛樺偍**: CNB / cnb.cool 瀵硅薄瀛樺偍锛堟案涔呯洿閾撅紝鍥剧墖涓庤棰戝垎绂诲瓨鍌級
+- 🔐 密码验证 - 安全访问控制
+- 📤 拖拽上传 - 支持拖拽或点击上传，支持多文件与上传进度
+- 🖼️ 相册管理 - 图片/视频网格展示，按时间倒序，支持搜索
+- 🔍 图片预览 - 全屏预览，支持键盘导航（← / → / Esc）
+- 📋 链接复制 - 一键复制直链 / Markdown / HTML 引用
+- 🗑️ 图片管理 - 支持删除文件
+- 🌙 主题切换 - 支持明暗主题
 
-## API 鏂囨。
+## 技术栈
 
-鎵€鏈夋帴鍙ｈ繑鍥炵粺涓€ JSON 缁撴瀯锛歚{ "code": 0, "msg": "ok", "data": ... }`锛宍code` 涓?`0` 琛ㄧず鎴愬姛銆?
-### 1. 楠岃瘉瀵嗙爜
+- **前端**: Vue 3 + TypeScript + Vite + TailwindCSS + Pinia
+- **后端**: Edge Functions（腾讯云 EdgeOne Pages）
+- **存储**: CNB / cnb.cool 对象存储（永久直链，图片与视频分离存储）
+
+## API 文档
+
+所有接口返回统一 JSON 结构：`{ "code": 0, "msg": "ok", "data": ... }`，`code` 为 `0` 表示成功。
+
+### 1. 验证密码
 
 ```
 POST /api/auth/verify
 Content-Type: application/json
 
 {
-  "password": "浣犵殑瀵嗙爜"
+  "password": "你的密码"
 }
 ```
 
-- 鎴愬姛锛歚{ "code": 0, "msg": "ok", "data": { "success": true } }`
-- 瀵嗙爜閿欒锛歚401` `{ "code": 401, "msg": "wrong password" }`
-- 鏈嶅姟鍣ㄦ湭閰嶇疆瀵嗙爜锛歚{ "code": 400, "msg": "server password not configured" }`
+- 成功：`{ "code": 0, "msg": "ok", "data": { "success": true } }`
+- 密码错误：`401` `{ "code": 401, "msg": "wrong password" }`
+- 服务器未配置密码：`{ "code": 400, "msg": "server password not configured" }`
 
-### 2. 鑾峰彇涓婁紶绛惧悕
+### 2. 获取上传签名
 
-鍓嶇涓婁紶鍓嶅厛璋冪敤锛岃幏鍙栧璞″瓨鍌ㄧ殑涓婁紶鍦板潃锛坄upload_url`锛変笌宸茬粡闅忔満閲嶅懡鍚嶇殑鏂囦欢鍚嶏紙`safeFileName`锛夈€傚浘鐗囥€佽棰戯紙mp4/mov/mkv/webm/m4v/3gp锛変細鑷姩鍒嗘祦鍒颁笉鍚岀殑瀛樺偍妗躲€?
+前端上传前先调用，获取对象存储的上传地址（`upload_url`）与已经随机重命名的文件名（`safeFileName`）。图片、视频（mp4/mov/mkv/webm/m4v/3gp）会自动分流到不同的存储桶。
+
 ```
 GET /api/upload/sign?name=example.png&size=10240
 ```
 
-- 缂哄皯鍙傛暟锛歚{ "code": 400, "msg": "missing name or size param" }`
-- 鎴愬姛锛歚{ "code": 0, "data": { "upload_url": "...", "assets": {...}, "safeFileName": "..." } }`
+- 缺少参数：`{ "code": 400, "msg": "missing name or size param" }`
+- 成功：`{ "code": 0, "data": { "upload_url": "...", "assets": {...}, "safeFileName": "..." } }`
 
-### 3. 涓婁紶鏂囦欢锛圥UT 鍒板璞″瓨鍌級
+### 3. 上传文件（PUT 到对象存储）
 
-鑾峰彇绛惧悕鍚庯紝灏嗘枃浠朵簩杩涘埗浣滀负璇锋眰浣撲紶鍏?`upload_url`銆?
+获取签名后，将文件二进制作为请求体传入 `upload_url`。
+
 ```
-POST /api/upload/put?upload_url=<sign杩斿洖鐨剈pload_url>
+POST /api/upload/put?upload_url=<sign返回的upload_url>
 Content-Type: application/octet-stream
 
-<鏂囦欢浜岃繘鍒?
+<文件二进制>
 ```
 
-- 鎴愬姛锛歚{ "code": 0, "msg": "ok" }`
-- 缂哄皯鍙傛暟锛歚{ "code": 400, "msg": "missing upload_url param" }`
-- 瀵硅薄瀛樺偍涓婁紶澶辫触锛氳繑鍥?`502`锛岄敊璇俊鎭湪 `data.message` 涓?
-### 4. 鑾峰彇鏂囦欢鍒楄〃
+- 成功：`{ "code": 0, "msg": "ok" }`
+- 缺少参数：`{ "code": 400, "msg": "missing upload_url param" }`
+- 对象存储上传失败：返回 `502`，错误信息在 `data.message` 中
+
+### 4. 获取文件列表
 
 ```
 GET /api/files
 ```
 
-- 鎴愬姛锛歚{ "code": 0, "data": [ { "id": "...", "key": "...", "url": "/img-api/...", "name": "x.png", "size": 123, "type": "image/png", "createdAt": "..." } ] }`锛堟寜鍒涘缓鏃堕棿鍊掑簭锛?
-### 5. 鍒犻櫎鏂囦欢
+- 成功：`{ "code": 0, "data": [ { "id": "...", "key": "...", "url": "/img-api/...", "name": "x.png", "size": 123, "type": "image/png", "createdAt": "..." } ] }`（按创建时间倒序）
+
+### 5. 删除文件
 
 ```
-DELETE /api/file?path=<鏂囦欢鐨?key锛堝惈 /-/imgs/ 鎴?/-/files/锛?
+DELETE /api/file?path=<文件的 key（含 /-/imgs/ 或 /-/files/）>
 ```
 
-- 鎴愬姛锛歚{ "code": 0, "msg": "ok" }`
-- 缂哄皯鍙傛暟锛歚{ "code": 400, "msg": "missing path param" }`
-- 璺緞鏃犳晥锛歚{ "code": 400, "msg": "invalid path" }`
+- 成功：`{ "code": 0, "msg": "ok" }`
+- 缺少参数：`{ "code": 400, "msg": "missing path param" }`
+- 路径无效：`{ "code": 400, "msg": "invalid path" }`
 
-### 6. 璁块棶鍥剧墖 / 瑙嗛鐩撮摼
+### 6. 访问图片 / 视频直链
 
 ```
 GET /img-api/<mediaPath>
 ```
 
-`mediaPath` 鏄枃浠跺湪瀛樺偍涓殑璺緞锛堝垪琛ㄦ帴鍙?`url` 瀛楁鐨?`\"/img-api/\"` 涔嬪悗閮ㄥ垎锛夛紝鏀寔 CDN 鍔犻€熴€?
-## 蹇€熷紑濮?
-### 鐜瑕佹眰
+`mediaPath` 是文件在存储中的路径（列表接口 `url` 字段的 `\"/img-api/\"` 之后部分），支持 CDN 加速。
+
+## 快速开始
+
+### 环境要求
 
 - Node.js >= 20.0.0
 - pnpm >= 10.0.0
 
-### 瀹夎
+### 安装
 
 ```bash
 pnpm install
 ```
 
-### 寮€鍙?
+### 开发
+
 ```bash
 pnpm dev
 ```
 
-### 鏋勫缓
+### 构建
 
 ```bash
 pnpm build
 ```
 
-## 鐜鍙橀噺锛圗dge Functions 缁戝畾锛?
-鍦?EdgeOne Pages 鐜涓厤缃互涓嬪彉閲忥細
+## 环境变量（Edge Functions 绑定）
 
-| 鍙橀噺 | 璇存槑 |
+在 EdgeOne Pages 环境中配置以下变量：
+
+| 变量 | 说明 |
 |------|------|
-| `UPLOAD_PASSWORD` | 涓婁紶璁块棶瀵嗙爜锛坄/api/auth/verify` 鏍￠獙锛?|
-| `SLUG_IMG` | cnb.cool 瀛樺偍搴撹矾寰勶紝榛樿 `wujinpai/cnbimg` |
-| `TOKEN_IMG` | cnb.cool 璁块棶浠ょ墝锛堣/鍐欏瓨鍌級 |
+| `UPLOAD_PASSWORD` | 上传访问密码（`/api/auth/verify` 校验） |
+| `SLUG_IMG` | cnb.cool 存储库路径，默认 `wujinpai/cnbimg` |
+| `TOKEN_IMG` | cnb.cool 访问令牌（读/写存储） |
 
-## 閮ㄧ讲
+## 部署
 
-閮ㄧ讲鍒拌吘璁簯 EdgeOne Pages锛圙it 闆嗘垚锛屾帹 main 鑷姩鏋勫缓閮ㄧ讲锛夛細
+部署到腾讯云 EdgeOne Pages（Git 集成，推 main 自动构建部署）：
 
-1. `dist/` 鈫?Pages 闈欐€佺珯鐐癸紙瑙?`edgeone.json` 鐨?`outputDirectory`锛?2. `edge-functions/**` 鈫?Edge Functions锛堣嚜鍔ㄩ儴缃插埌瀵瑰簲璺敱锛?3. 閰嶇疆涓婅堪鐜鍙橀噺鍚庡嵆鍙娇鐢?
-## 璁稿彲璇?
+1. `dist/` → Pages 静态站点（见 `edgeone.json` 的 `outputDirectory`）
+2. `edge-functions/**` → Edge Functions（自动部署到对应路由）
+3. 配置上述环境变量后即可使用
+
+## 许可证
+
 MIT
