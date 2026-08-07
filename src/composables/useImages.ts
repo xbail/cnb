@@ -10,10 +10,19 @@ export interface ImageRecord {
   createdAt: string
 }
 
+const VIDEO_EXTS = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp']
+const AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac']
+
 export function isVideo(file: ImageRecord): boolean {
   if (file.type.startsWith('video/')) return true
   const ext = file.name.toLowerCase().split('.').pop() || ''
-  return ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp'].includes(ext)
+  return VIDEO_EXTS.includes(ext)
+}
+
+export function isAudio(file: ImageRecord): boolean {
+  if (file.type.startsWith('audio/')) return true
+  const ext = file.name.toLowerCase().split('.').pop() || ''
+  return AUDIO_EXTS.includes(ext)
 }
 
 const API_BASE = '/api'
