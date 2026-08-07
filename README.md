@@ -1,8 +1,8 @@
-# CNB 图床 Pro
+# CNB 小网盘
 
-一个简洁、安全的轻量级图床应用，支持密码验证、拖拽上传、图片压缩、相册管理和图片预览，运行在腾讯云 EdgeOne Pages 上，文件存储在 CNB(cnb.cool)对象存储中。
+一个简洁、安全的轻量级小网盘应用，支持密码验证、拖拽上传、图片压缩、相册管理和在线预览，运行在腾讯云 EdgeOne Pages 上，文件存储在 CNB(cnb.cool)对象存储中。
 
-> 本项目为 `wujinpai/cnb` 的二次开发版本，在修复线上部署问题的基础上进行了功能增强，适合个人图床自用。
+> 本项目为 `wujinpai/cnb` 的二次开发版本，在修复线上部署问题的基础上进行了功能增强，适合个人网盘自用。
 
 ## 功能特性
 
@@ -10,12 +10,13 @@
 - 📤 拖拽上传 - 支持拖拽或点击上传，支持多文件与上传进度
 - 🗜️ 图片压缩 - 超大图片（超过 1920×1080）上传前自动等比缩小并转为 WebP，GIF 动图自动跳过
 - 🖼️ 相册管理 - 图片/视频/音频网格展示，按时间倒序
-- 🔍 图片预览 - 全屏预览（图片 / 视频 / 音频播放），支持键盘导航（← / → / Esc）
+- 🔍 在线预览 - 全屏预览（图片 / 视频 / 音频播放），支持键盘导航（← / → / Esc）
 - 📋 链接复制 - 一键复制直链 / Markdown / HTML 引用
-- 🗑️ 图片管理 - 支持删除文件
+- 🗑️ 文件管理 - 支持删除文件
 - 📚 API 文档 - 首页内置接口文档，方便对接第三方
 - 🌙 主题切换 - 支持明暗主题
 - 🎵 音频支持 - 支持 mp3 / wav / ogg / m4a / aac / flac 上传与在线播放
+- 📦 不限大小 - 单文件大小不做前端限制（受 CNB 对象存储自身限制）
 
 ## 技术栈
 
@@ -46,8 +47,6 @@ Content-Type: application/json
 
 前端上传前先调用，获取对象存储的上传地址（`upload_url`）与已经随机重命名的文件名（`safeFileName`）。图片走图片桶；视频（mp4/mov/mkv/webm/m4v/3gp/avi）与音频（mp3/wav/ogg/m4a/aac/flac）自动分流到文件桶。
 
-> 单个文件最大 **25MB**（CNB 对象存储上限）。
-
 ```
 GET /api/upload/sign?name=example.png&size=10240
 ```
@@ -55,19 +54,19 @@ GET /api/upload/sign?name=example.png&size=10240
 - 缺少参数：`{ "code": 400, "msg": "missing name or size param" }`
 - 成功：`{ "code": 0, "data": { "upload_url": "...", "assets": {...}, "safeFileName": "..." } }`
 
-### 3. 上传文件（浏览器直传 CNB 对象存储）
+### 3. 上传文件（经 EdgeOne 转发至 CNB）
 
-获取签名后，浏览器**直接 PUT** 文件二进制到返回的 `upload_url`，**不经过本站 EdgeOne 函数中转**（EdgeOne Edge Functions 请求 body 限制仅 1MB，中转会导致大文件 500；直传无此限制）。
+获取签名后，浏览器将文件二进制 **POST** 到本站 `/api/upload/put`，由 EdgeOne Edge Function 服务端转发至 CNB 对象存储，避免跨域限制。
 
 ```
-PUT <sign返回的upload_url>
+POST /api/upload/put?upload_url=<签名返回的URL>
 Content-Type: application/octet-stream
 
 <文件二进制>
 ```
 
-- 成功：HTTP `2xx`，返回对象存储响应
-- 上传失败：`xhr.status` 非 `2xx`，错误详情在响应体中
+- 成功：`{ "code": 0, "msg": "ok" }`
+- 上传失败：非 `2xx`，错误详情在 `msg` 中
 
 ### 4. 获取文件列表
 
