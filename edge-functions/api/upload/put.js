@@ -8,14 +8,17 @@ export async function onRequestPost(context) {
       return json({ code: 400, msg: 'missing upload_url param' }, 400)
     }
 
-    const body = await req.arrayBuffer()
+    const contentType = req.headers.get('content-type') || 'application/octet-stream'
+    const contentLength = req.headers.get('content-length')
 
     const putRes = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': contentType,
+        ...(contentLength ? { 'Content-Length': contentLength } : {}),
       },
-      body,
+      body: req.body,
+      ...(req.body ? { duplex: 'half' } : {}),
     })
 
     if (!putRes.ok) {
