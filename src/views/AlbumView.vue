@@ -39,7 +39,7 @@ function handleNext() {
 }
 
 async function handleDelete(id: string) {
-  if (confirm('确定要删除这张图片吗？')) {
+  if (confirm('确定要删除这个文件吗？')) {
     const success = await deleteImage(id)
     if (success) {
       handleClose()
@@ -59,14 +59,14 @@ onMounted(() => {
     <main class="max-w-6xl mx-auto px-4 py-8">
       <div class="flex items-center justify-between mb-8">
         <div>
-          <h1 class="text-2xl font-bold gradient-text">📸 我的相册</h1>
-          <p class="text-sm text-text-secondary mt-2">共 <span class="gradient-text font-bold">{{ images.length }}</span> 个文件</p>
+          <h1 class="text-3xl font-bold gradient-text tracking-tight">我的相册</h1>
+          <p class="text-sm text-text-secondary mt-2">共 <span class="gradient-text font-bold">{{ images.length }}</span> 个文件 · 永久保存</p>
         </div>
         <button
           @click="fetchImages"
           class="px-6 py-3 rounded-xl gradient-btn text-white font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
         >
-          🔄 刷新
+          刷新
         </button>
       </div>
 

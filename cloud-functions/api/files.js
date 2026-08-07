@@ -17,20 +17,18 @@ export async function onRequestGet(context) {
         // ignore
       }
 
-      const name = (meta && meta.name) || key.split('/').pop() || key
-      const size = (meta && meta.size) || 0
-      const type = (meta && meta.type) || 'application/octet-stream'
-      const createdAt = (meta && meta.createdAt) || ''
+      // 跳过没有 meta 的孤立文件（如视频缩略图），避免列表出现 size:0 垃圾记录
+      if (!meta) continue
 
       records.push({
         id: key,
         key,
         url: '/api/file?key=' + encodeURIComponent(key),
-        thumbnailUrl: meta && meta.thumbKey ? '/api/file?key=' + encodeURIComponent(meta.thumbKey) : undefined,
-        name,
-        size,
-        type,
-        createdAt,
+        thumbnailUrl: meta.thumbKey ? '/api/file?key=' + encodeURIComponent(meta.thumbKey) : undefined,
+        name: meta.name || key.split('/').pop() || key,
+        size: meta.size || 0,
+        type: meta.type || 'application/octet-stream',
+        createdAt: meta.createdAt || '',
       })
     }
 

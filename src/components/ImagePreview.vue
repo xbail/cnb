@@ -123,7 +123,7 @@ onUnmounted(() => {
         <div class="max-w-4xl mx-auto">
           <h3 class="text-white font-bold text-xl truncate">{{ image.name }}</h3>
           <p class="text-white/70 text-sm mt-2">
-            📦 {{ formatFileSize(image.size) }} · 📅 {{ formatDate(image.createdAt) }}
+            {{ formatFileSize(image.size) }} · {{ formatDate(image.createdAt) }}
           </p>
 
           <div class="flex items-center gap-3 mt-5 flex-wrap">
@@ -136,7 +136,7 @@ onUnmounted(() => {
                   : 'bg-white/10 text-white hover:bg-white/20 hover:scale-105'
               ]"
             >
-              {{ copiedType === 'link' ? '✓ 已复制' : '🔗 链接' }}
+              {{ copiedType === 'link' ? '✓ 已复制' : '链接' }}
             </button>
             <button
               @click="handleCopy('markdown')"
@@ -147,7 +147,7 @@ onUnmounted(() => {
                   : 'bg-white/10 text-white hover:bg-white/20 hover:scale-105'
               ]"
             >
-              {{ copiedType === 'markdown' ? '✓ 已复制' : '📝 Markdown' }}
+              {{ copiedType === 'markdown' ? '✓ 已复制' : 'Markdown' }}
             </button>
             <button
               @click="handleCopy('html')"
@@ -158,14 +158,14 @@ onUnmounted(() => {
                   : 'bg-white/10 text-white hover:bg-white/20 hover:scale-105'
               ]"
             >
-              {{ copiedType === 'html' ? '✓ 已复制' : '🌐 HTML' }}
+              {{ copiedType === 'html' ? '✓ 已复制' : 'HTML' }}
             </button>
 
             <button
               @click="emit('delete', image.id)"
               class="px-5 py-3 rounded-xl text-sm font-semibold bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-all duration-300 hover:scale-105 border border-red-500/30"
             >
-              🗑️ 删除
+              删除
             </button>
           </div>
         </div>

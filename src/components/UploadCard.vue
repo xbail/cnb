@@ -70,7 +70,7 @@ async function handleCopy(type: string) {
     <div class="p-5">
       <p class="font-semibold text-text-primary truncate text-lg">{{ name }}</p>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary mt-2">
-        <p>📦 {{ formatFileSize(size) }} · {{ type }}</p>
+        <p>{{ formatFileSize(size) }} · {{ type }}</p>
       </div>
 
       <div v-if="hasThumbnail && thumbnailUrl" class="mt-4 glass-card-elevated rounded-xl px-4 py-3">
@@ -105,7 +105,7 @@ async function handleCopy(type: string) {
               : 'gradient-btn text-white'
           ]"
         >
-          {{ copiedType === 'link' ? '✓ 已复制' : '🔗 链接' }}
+          {{ copiedType === 'link' ? '✓ 已复制' : '链接' }}
         </button>
         <button
           @click="handleCopy('markdown')"
@@ -116,7 +116,7 @@ async function handleCopy(type: string) {
               : 'gradient-btn text-white'
           ]"
         >
-          {{ copiedType === 'markdown' ? '✓ 已复制' : '📝 Markdown' }}
+          {{ copiedType === 'markdown' ? '✓ 已复制' : 'Markdown' }}
         </button>
         <button
           @click="handleCopy('html')"
@@ -127,7 +127,7 @@ async function handleCopy(type: string) {
               : 'gradient-btn text-white'
           ]"
         >
-          {{ copiedType === 'html' ? '✓ 已复制' : '🌐 HTML' }}
+          {{ copiedType === 'html' ? '✓ 已复制' : 'HTML' }}
         </button>
       </div>
     </div>

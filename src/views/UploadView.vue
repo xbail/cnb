@@ -49,10 +49,27 @@ function getUploadProgress() {
   <div class="min-h-screen">
     <NavBar />
 
-    <main class="max-w-3xl mx-auto px-4 py-8">
-      <div class="space-y-4 glass-card rounded-2xl p-6">
+    <main class="max-w-3xl mx-auto px-4 py-10">
+      <div class="text-center mb-10">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card text-xs font-medium text-text-secondary mb-5">
+          <span class="w-2 h-2 rounded-full gradient-btn"></span>
+          永久存储 · 直链分享 · 视频可播
+        </div>
+        <h1 class="text-4xl sm:text-5xl font-bold gradient-text tracking-tight">CNB 图床</h1>
+        <p class="text-text-secondary mt-4 text-base leading-relaxed">
+          上传图片或视频，获取永久直链，随处分享
+        </p>
+      </div>
+
+      <div class="glass-card rounded-3xl p-6">
         <div class="flex items-center justify-between">
-          <label for="thumbnail-toggle" class="text-xs text-text-secondary">生成缩略图</label>
+          <div class="flex items-center gap-3">
+            <svg class="w-5 h-5 gradient-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <label for="thumbnail-toggle" class="text-sm font-medium text-text-secondary">自动生成缩略图</label>
+          </div>
           <button
             id="thumbnail-toggle"
             type="button"
@@ -60,13 +77,13 @@ function getUploadProgress() {
             :aria-checked="generateThumbnail"
             @click="generateThumbnail = !generateThumbnail"
             :class="[
-              'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2',
+              'relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2',
               generateThumbnail ? 'gradient-btn' : 'bg-surface-elevated'
             ]"
           >
             <span
               :class="[
-                'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
                 generateThumbnail ? 'translate-x-5' : 'translate-x-0'
               ]"
             />
@@ -74,9 +91,9 @@ function getUploadProgress() {
         </div>
       </div>
 
-      <DropZone @files="handleFiles" class="mt-4" />
+      <DropZone @files="handleFiles" class="mt-5" />
 
-      <div v-if="processing" class="mt-6 glass-card rounded-2xl p-4">
+      <div v-if="processing" class="mt-5 glass-card rounded-2xl p-4">
         <div class="flex items-center gap-2 text-sm text-text-secondary">
           <svg class="h-5 w-5 animate-spin text-accent" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -86,23 +103,23 @@ function getUploadProgress() {
         </div>
       </div>
 
-    <div v-if="uploading" class="mt-6 glass-card rounded-2xl p-4">
-      <div class="flex items-center justify-between text-sm mb-3">
-        <span class="text-text-secondary">上传中...</span>
-        <span class="text-text-primary font-medium">
-          {{ uploadQueue.length > 0 ? `${currentUploadIndex + 1}/${uploadQueue.length}` : '' }}
-          <span class="gradient-text font-bold">{{ Math.round(getUploadProgress()) }}%</span>
-        </span>
+      <div v-if="uploading" class="mt-5 glass-card rounded-2xl p-5">
+        <div class="flex items-center justify-between text-sm mb-3">
+          <span class="text-text-secondary">上传中...</span>
+          <span class="text-text-primary font-medium">
+            {{ uploadQueue.length > 0 ? `${currentUploadIndex + 1}/${uploadQueue.length}` : '' }}
+            <span class="gradient-text font-bold">{{ Math.round(getUploadProgress()) }}%</span>
+          </span>
+        </div>
+        <div class="h-2.5 bg-surface-elevated rounded-full overflow-hidden">
+          <div
+            class="h-full gradient-btn transition-all duration-300 rounded-full"
+            :style="{ width: getUploadProgress() + '%' }"
+          />
+        </div>
       </div>
-      <div class="h-3 bg-surface-elevated rounded-full overflow-hidden">
-        <div
-          class="h-full gradient-btn transition-all duration-300 rounded-full"
-          :style="{ width: getUploadProgress() + '%' }"
-        />
-      </div>
-    </div>
 
-      <div v-if="error" class="mt-6 glass-card rounded-2xl p-4 border-red-500/30 bg-red-500/5">
+      <div v-if="error" class="mt-5 glass-card rounded-2xl p-4 border-red-500/30 bg-red-500/5">
         <div class="flex items-center gap-2 text-red-500">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -111,9 +128,12 @@ function getUploadProgress() {
         </div>
       </div>
 
-      <div v-if="uploadedFiles.length > 0" class="mt-8">
-        <h2 class="text-xl font-bold gradient-text mb-4">
-          已上传 ({{ uploadedFiles.length }})
+      <div v-if="uploadedFiles.length > 0" class="mt-10">
+        <h2 class="text-xl font-bold gradient-text mb-5 flex items-center gap-2">
+          上传成功 ({{ uploadedFiles.length }})
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </h2>
         <div class="space-y-4">
           <UploadCard

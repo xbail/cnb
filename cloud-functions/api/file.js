@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
       // ignore
     }
 
-    const contentType = (meta && meta.type) || 'application/octet-stream'
+    const contentType = (meta && meta.type) || guessContentType(key)
 
     const range = context.request.headers.get('range')
 
@@ -97,4 +97,16 @@ function json(data, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   })
+}
+
+function guessContentType(key) {
+  const ext = (key.split('.').pop() || '').toLowerCase()
+  const map = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+    avif: 'image/avif', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v', 3gp: 'video/3gpp',
+    mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac',
+    pdf: 'application/pdf', json: 'application/json', txt: 'text/plain',
+  }
+  return map[ext] ? map[ext] : 'application/octet-stream'
 }
