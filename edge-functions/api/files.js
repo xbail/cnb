@@ -54,7 +54,7 @@ function getTypeFromExt(ext) {
     jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
     avif: 'image/avif', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon',
     mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', m4v: 'video/x-m4v', '3gp': 'video/3gpp',
-    mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
+    mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac',
   }
   return map[ext] || 'application/octet-stream'
 }
