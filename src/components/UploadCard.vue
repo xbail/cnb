@@ -15,23 +15,35 @@ const props = defineProps<Props>()
 const copiedType = ref<string | null>(null)
 
 const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp']
+const audioExts = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac']
+
 function isVideoFile(): boolean {
   if (props.type.startsWith('video/')) return true
   const ext = props.name.toLowerCase().split('.').pop() || ''
   return videoExts.includes(ext)
 }
 
+function isAudioFile(): boolean {
+  if (props.type.startsWith('audio/')) return true
+  const ext = props.name.toLowerCase().split('.').pop() || ''
+  return audioExts.includes(ext)
+}
+
 async function handleCopy(type: string) {
   const url = props.url
   let content = url
   if (type === 'markdown') {
-    if (isVideoFile()) {
+    if (isAudioFile()) {
+      content = `<audio src="${url}" controls></audio>`
+    } else if (isVideoFile()) {
       content = `<video src="${url}" controls></video>`
     } else {
       content = `![${props.name}](${url})`
     }
   } else if (type === 'html') {
-    if (isVideoFile()) {
+    if (isAudioFile()) {
+      content = `<audio src="${url}" controls></audio>`
+    } else if (isVideoFile()) {
       content = `<video src="${url}" controls></video>`
     } else {
       content = `<img src="${url}" alt="${props.name}" />`
@@ -48,18 +60,25 @@ async function handleCopy(type: string) {
   <div class="glass-card rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
     <div class="aspect-video bg-surface-elevated flex items-center justify-center">
       <img
-        v-if="!isVideoFile()"
+        v-if="!isVideoFile() && !isAudioFile()"
         :src="url"
         :alt="name"
         class="max-w-full max-h-full object-contain"
       />
       <video
-        v-else
+        v-else-if="isVideoFile()"
         :src="url"
         controls
         preload="metadata"
         playsinline
         class="max-w-full max-h-full object-contain"
+      />
+      <audio
+        v-else
+        :src="url"
+        controls
+        preload="metadata"
+        class="w-5/6"
       />
     </div>
 
@@ -68,7 +87,7 @@ async function handleCopy(type: string) {
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary mt-1.5">
         <p v-if="compressed && originalSize">
           {{ formatFileSize(originalSize) }} → <span class="gradient-text font-bold">{{ formatFileSize(size) }}</span>
-          <span class="ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-medium">已压缩 · 无损</span>
+          <span class="ml-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-medium">已压缩 · WebP</span>
         </p>
         <p v-else>{{ formatFileSize(size) }} · {{ type }}</p>
       </div>
