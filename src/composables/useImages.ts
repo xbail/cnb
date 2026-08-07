@@ -4,7 +4,6 @@ export interface ImageRecord {
   id: string
   key: string
   url: string
-  thumbnailUrl?: string
   name: string
   size: number
   type: string
@@ -41,7 +40,6 @@ export function useImages() {
         id: item.key,
         key: item.key,
         url: item.url,
-        thumbnailUrl: item.thumbnailUrl,
         name: item.name,
         size: item.size,
         type: item.type,
@@ -55,12 +53,15 @@ export function useImages() {
     }
   }
 
-  function saveImage(record: Omit<ImageRecord, 'id' | 'key' | 'createdAt'>) {
-    // 服务端已通过 /api/upload/confirm 持久化，此处仅作为内存即时反馈
+  function saveImage(record: { url: string; name: string; size: number; type: string; key: string }) {
+    // 文件本体已存 CNB，刷新后通过 /api/files 重新拉取，这里仅作内存即时反馈
     images.value.unshift({
-      ...record,
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      key: '',
+      id: record.key || Date.now().toString(36),
+      key: record.key || '',
+      url: record.url,
+      name: record.name,
+      size: record.size,
+      type: record.type,
       createdAt: new Date().toISOString(),
     })
   }
@@ -72,7 +73,7 @@ export function useImages() {
       return true
     }
 
-    const res = await fetch(`${API_BASE}/file?key=${encodeURIComponent(target.key)}`, {
+    const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(target.key)}`, {
       method: 'DELETE',
     })
     const data = await res.json().catch(() => ({}))

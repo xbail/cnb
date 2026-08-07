@@ -20,7 +20,6 @@ const emit = defineEmits<{
 }>()
 
 const copiedType = ref<string | null>(null)
-const videoRef = ref<HTMLVideoElement>()
 
 function handleCopy(type: string) {
   const url = props.image.url
@@ -53,10 +52,6 @@ function handleKeydown(e: KeyboardEvent) {
 onMounted(() => {
   document.body.style.overflow = 'hidden'
   document.addEventListener('keydown', handleKeydown)
-  
-  if (videoRef.value && !props.image.thumbnailUrl) {
-    videoRef.value.currentTime = 0.5
-  }
 })
 
 onUnmounted(() => {
@@ -103,9 +98,7 @@ onUnmounted(() => {
       <div class="max-w-6xl max-h-[85vh] mx-4">
         <video
           v-if="isVideo(image)"
-          ref="videoRef"
           :src="image.url"
-          :poster="image.thumbnailUrl"
           controls
           preload="metadata"
           playsinline

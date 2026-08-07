@@ -7,11 +7,6 @@ interface Props {
   name: string
   size: number
   type: string
-  hasThumbnail?: boolean
-  thumbnailUrl?: string
-  thumbnailWidth?: number
-  thumbnailHeight?: number
-  thumbnailSize?: number
 }
 
 const props = defineProps<Props>()
@@ -59,7 +54,6 @@ async function handleCopy(type: string) {
       <video
         v-else
         :src="url"
-        :poster="thumbnailUrl"
         controls
         preload="metadata"
         playsinline
@@ -71,25 +65,6 @@ async function handleCopy(type: string) {
       <p class="font-semibold text-text-primary truncate text-lg">{{ name }}</p>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary mt-2">
         <p>{{ formatFileSize(size) }} · {{ type }}</p>
-      </div>
-
-      <div v-if="hasThumbnail && thumbnailUrl" class="mt-4 glass-card-elevated rounded-xl px-4 py-3">
-        <p class="text-xs text-text-secondary mb-2 font-medium">缩略图</p>
-        <div class="flex items-center gap-4">
-          <img
-            :src="thumbnailUrl"
-            alt="缩略图"
-            class="h-12 w-12 rounded-xl border border-border/30 object-cover shadow"
-          />
-          <div class="flex gap-6 text-xs text-text-secondary">
-            <p v-if="thumbnailWidth && thumbnailHeight">
-              尺寸 <span class="gradient-text font-bold">{{ thumbnailWidth }}x{{ thumbnailHeight }}</span>
-            </p>
-            <p v-if="thumbnailSize">
-              大小 <span class="gradient-text font-bold">{{ formatFileSize(thumbnailSize) }}</span>
-            </p>
-          </div>
-        </div>
       </div>
 
       <div class="mt-4 flex items-center gap-2 flex-wrap">

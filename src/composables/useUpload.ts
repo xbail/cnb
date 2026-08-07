@@ -3,14 +3,10 @@ import { useImages } from './useImages'
 
 export interface UploadResult {
   url: string
-  thumbnailUrl?: string
   name: string
   size: number
   type: string
-  hasThumbnail?: boolean
-  thumbnailWidth?: number
-  thumbnailHeight?: number
-  thumbnailSize?: number
+  key: string
 }
 
 export interface UploadOptions {
@@ -20,138 +16,28 @@ export interface UploadOptions {
   thumbnailQuality?: number
 }
 
-interface ThumbnailResult {
-  thumbnailFile: File
-  previewUrl: string
-  width: number
-  height: number
-  size: number
-}
-
 const API_BASE = '/api'
 
-function isImageFile(file: File): boolean {
-  return file.type.startsWith('image/')
-}
-
-function isVideo(file: File): boolean {
+function getUploadType(fileName: string): string {
+  const ext = fileName.toLowerCase().split('.').pop() || ''
   const videoExts = ['mp4', 'mov', 'mkv', 'webm', 'm4v', '3gp']
-  const ext = file.name.toLowerCase().split('.').pop() || ''
-  return videoExts.includes(ext)
+  return videoExts.includes(ext) ? 'files' : 'imgs'
 }
 
-async function generateThumbnailImage(
-  file: File,
-  thumbnailMaxWidth: number = 200,
-  thumbnailMaxHeight: number = 200,
-  thumbnailQuality: number = 0.9,
-): Promise<ThumbnailResult> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      const img = new Image()
-      img.src = e.target?.result as string
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-
-        if (!ctx) {
-          reject(new Error('无法获取 canvas context'))
-          return
-        }
-
-        let width = img.width
-        let height = img.height
-
-        if (width > thumbnailMaxWidth || height > thumbnailMaxHeight) {
-          const ratio = Math.min(thumbnailMaxWidth / width, thumbnailMaxHeight / height)
-          width = Math.round(width * ratio)
-          height = Math.round(height * ratio)
-        }
-
-        canvas.width = width
-        canvas.height = height
-        ctx.drawImage(img, 0, 0, width, height)
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const thumbnailFile = new File(
-                [blob],
-                file.name.replace(/\.\w+$/, '_thumb.webp'),
-                { type: 'image/webp' },
-              )
-              const previewUrl = URL.createObjectURL(blob)
-              resolve({
-                thumbnailFile,
-                previewUrl,
-                width,
-                height,
-                size: blob.size,
-              })
-            } else {
-              reject(new Error('缩略图生成失败'))
-            }
-          },
-          'image/webp',
-          thumbnailQuality,
-        )
-      }
-      img.onerror = () => reject(new Error('图片加载失败'))
-    }
-    reader.onerror = () => reject(new Error('文件读取失败'))
-  })
+function extractMediaPath(url: string): string {
+  if (url.includes('-/imgs/')) {
+    return url.split('-/imgs/')[1]
+  } else if (url.includes('-/files/')) {
+    return url.split('-/files/')[1]
+  }
+  return url
 }
 
-async function generateVideoThumbnail(file: File): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    const video = document.createElement('video')
-    video.preload = 'metadata'
-    video.muted = true
-
-    const url = URL.createObjectURL(file)
-    video.src = url
-
-    const done = (blob: Blob | null) => {
-      URL.revokeObjectURL(url)
-      resolve(blob)
-    }
-
-    video.onloadedmetadata = () => {
-      video.currentTime = 0.1
-
-      video.onseeked = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = video.videoWidth || 320
-        canvas.height = video.videoHeight || 240
-
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          done(null)
-          return
-        }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        canvas.toBlob(
-          (blob) => done(blob),
-          'image/jpeg',
-          0.8,
-        )
-      }
-
-      video.onerror = () => done(null)
-    }
-
-    video.onerror = () => done(null)
-  })
-}
-
-async function signUpload(name: string, contentType: string): Promise<{ upload_url: string; key: string; name: string }> {
-  const res = await fetch(`${API_BASE}/upload/sign`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, contentType }),
-  })
+async function signUpload(name: string, size: number): Promise<{ upload_url: string; assets: any; safeFileName: string }> {
+  const res = await fetch(
+    `${API_BASE}/upload/sign?name=${encodeURIComponent(name)}&size=${size}`,
+    { method: 'GET' },
+  )
 
   if (!res.ok) {
     let errorMsg = `获取签名失败: ${res.status}`
@@ -166,16 +52,14 @@ async function signUpload(name: string, contentType: string): Promise<{ upload_u
   if (data.code !== 0) {
     throw new Error(data.msg || '获取签名失败')
   }
-
   return data.data
 }
 
-async function putWithProgress(url: string, body: BodyInit, contentType: string, onProgress?: (pct: number) => void): Promise<void> {
-  if (onProgress && typeof XMLHttpRequest !== 'undefined' && body instanceof Blob) {
+async function putWithProgress(uploadUrl: string, file: File, onProgress?: (pct: number) => void): Promise<void> {
+  if (onProgress && typeof XMLHttpRequest !== 'undefined') {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
-      xhr.open('PUT', url)
-      xhr.setRequestHeader('Content-Type', contentType)
+      xhr.open('POST', `${API_BASE}/upload/put?upload_url=${encodeURIComponent(uploadUrl)}`)
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           onProgress(Math.round((e.loaded / e.total) * 100))
@@ -186,36 +70,18 @@ async function putWithProgress(url: string, body: BodyInit, contentType: string,
         else reject(new Error(`上传失败: ${xhr.status}`))
       }
       xhr.onerror = () => reject(new Error('上传失败: 网络错误'))
-      xhr.send(body)
+      xhr.send(file)
     })
   }
 
-  const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': contentType }, body })
+  const res = await fetch(`${API_BASE}/upload/put?upload_url=${encodeURIComponent(uploadUrl)}`, {
+    method: 'POST',
+    body: file,
+  })
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
     throw new Error(`上传失败: ${res.status} ${errText}`)
   }
-}
-
-async function confirmUpload(payload: {
-  key: string
-  name: string
-  size: number
-  type: string
-  thumbKey: string
-  createdAt: string
-}): Promise<{ key: string; url: string }> {
-  const res = await fetch(`${API_BASE}/upload/confirm`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok || data.code !== 0) {
-    throw new Error(data.msg || `保存记录失败: ${res.status}`)
-  }
-  return data.data
 }
 
 export function useUpload() {
@@ -229,114 +95,41 @@ export function useUpload() {
     file: File,
     options: UploadOptions = {},
   ): Promise<UploadResult | null> {
-    const {
-      generateThumbnail = false,
-      thumbnailMaxWidth = 400,
-      thumbnailMaxHeight = 800,
-      thumbnailQuality = 0.6,
-    } = options
-
+    void options
     uploading.value = true
     progress.value = 0
     error.value = ''
 
     try {
-      let thumbResult: ThumbnailResult | null = null
-      let videoThumbBlob: Blob | null = null
-
-      if (isImageFile(file) && generateThumbnail) {
-        processing.value = true
-        try {
-          thumbResult = await generateThumbnailImage(
-            file,
-            thumbnailMaxWidth,
-            thumbnailMaxHeight,
-            thumbnailQuality,
-          )
-        } catch (thumbErr) {
-          console.warn('缩略图生成失败:', thumbErr)
-        } finally {
-          processing.value = false
-        }
-      } else if (isVideo(file)) {
-        processing.value = true
-        try {
-          videoThumbBlob = await generateVideoThumbnail(file)
-        } catch (thumbErr) {
-          console.warn('视频缩略图生成失败:', thumbErr)
-        } finally {
-          processing.value = false
-        }
-      }
-
       progress.value = 5
 
-      const sign = await signUpload(file.name, file.type || 'application/octet-stream')
+      const sign = await signUpload(file.name, file.size)
       console.log('[Upload] Signed:', sign)
 
       progress.value = 10
-      const mainContentType = file.type || 'application/octet-stream'
-      await putWithProgress(sign.upload_url, file, mainContentType, (pct) => {
-        progress.value = 10 + Math.round(pct * 0.7)
+      await putWithProgress(sign.upload_url, file, (pct) => {
+        progress.value = 10 + Math.round(pct * 0.85)
       })
 
-      progress.value = 85
-
-      let thumbKey = ''
-
-      if (thumbResult) {
-        try {
-          const thumbSign = await signUpload(thumbResult.thumbnailFile.name, 'image/webp')
-          await putWithProgress(thumbSign.upload_url, thumbResult.thumbnailFile, 'image/webp')
-          thumbKey = thumbSign.key
-        } catch (thumbErr) {
-          console.warn('图片缩略图上传失败:', thumbErr)
-        }
-      } else if (videoThumbBlob) {
-        try {
-          const thumbName = file.name.replace(/\.[^.]+$/, '_thumb.jpg')
-          const thumbSign = await signUpload(thumbName, 'image/jpeg')
-          await putWithProgress(thumbSign.upload_url, videoThumbBlob, 'image/jpeg')
-          thumbKey = thumbSign.key
-        } catch (thumbErr) {
-          console.warn('视频缩略图上传失败:', thumbErr)
-        }
-      }
-
-      const confirmed = await confirmUpload({
-        key: sign.key,
-        name: file.name,
-        size: file.size,
-        type: file.type || 'application/octet-stream',
-        thumbKey,
-        createdAt: new Date().toISOString(),
-      })
+      progress.value = 95
 
       const baseUrl = window.location.origin
-      const mainUrl = baseUrl + confirmed.url
-      const thumbnailUrl = thumbKey ? baseUrl + '/api/file?key=' + encodeURIComponent(thumbKey) : undefined
+      const mediaPath = extractMediaPath(sign.assets.path)
+      const mainUrl = baseUrl + '/img-api/' + mediaPath
 
-      saveImage({
+      const record = {
         url: mainUrl,
-        thumbnailUrl: thumbnailUrl || undefined,
         name: file.name,
         size: file.size,
-        type: file.type,
-      })
+        type: getUploadType(file.name) === 'files' ? 'video/' + (file.name.toLowerCase().split('.').pop() || 'mp4') : (file.type || 'image/jpeg'),
+        key: sign.assets.path,
+      }
+
+      saveImage(record)
 
       progress.value = 100
 
-      return {
-        url: mainUrl,
-        thumbnailUrl: thumbnailUrl || undefined,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        hasThumbnail: !!thumbResult,
-        thumbnailWidth: thumbResult?.width,
-        thumbnailHeight: thumbResult?.height,
-        thumbnailSize: thumbResult?.size,
-      }
+      return record
     } catch (e) {
       console.error('[Upload] Error:', e)
       error.value = e instanceof Error ? e.message : '上传失败'

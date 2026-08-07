@@ -20,15 +20,22 @@ export async function onRequest(context: any) {
   const mediaType = getMediaType(pathStr)
   const targetUrl = 'https://cnb.cool/' + context.env.SLUG_IMG + '/-/' + mediaType + '/' + pathStr
 
+  const reqHeaders: Record<string, string> = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+    Referer: 'https://cnb.cool/',
+    Origin: 'https://cnb.cool',
+    Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+  }
+
+  const range = context.request.headers.get('range')
+  if (range) {
+    reqHeaders['Range'] = range
+  }
+
   try {
     const resp = await fetch(targetUrl, {
       method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-        Referer: 'https://cnb.cool/',
-        Origin: 'https://cnb.cool',
-        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-      },
+      headers: reqHeaders,
     })
 
     const headers = new Headers()
@@ -38,7 +45,8 @@ export async function onRequest(context: any) {
       }
     }
     headers.set('Access-Control-Allow-Origin', '*')
-    headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS')
+    headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS, DELETE')
+    headers.set('Access-Control-Allow-Headers', 'Range, Content-Type')
     headers.set('Cache-Control', 'public, max-age=31536000')
 
     return new Response(resp.body, {

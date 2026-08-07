@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import NavBar from '@/components/layout/NavBar.vue'
 import DropZone from '@/components/DropZone.vue'
 import UploadCard from '@/components/UploadCard.vue'
-import { useUpload, type UploadResult, type UploadOptions } from '@/composables/useUpload'
+import { useUpload, type UploadResult } from '@/composables/useUpload'
 
 const { uploading, progress, error, processing, upload } = useUpload()
 
@@ -11,24 +11,15 @@ const uploadedFiles = ref<UploadResult[]>([])
 const uploadQueue = ref<File[]>([])
 const currentUploadIndex = ref(0)
 
-const generateThumbnail = ref(false)
-
 async function handleFiles(files: File[]) {
   if (files.length === 0) return
-
-  const options: UploadOptions = {
-    generateThumbnail: generateThumbnail.value,
-    thumbnailMaxWidth: 400,
-    thumbnailMaxHeight: 800,
-    thumbnailQuality: 0.6,
-  }
 
   uploadQueue.value = files
   currentUploadIndex.value = 0
 
   for (let i = 0; i < files.length; i++) {
     currentUploadIndex.value = i
-    const result = await upload(files[i], options)
+    const result = await upload(files[i])
     if (result) {
       uploadedFiles.value.unshift(result)
     }
@@ -61,37 +52,7 @@ function getUploadProgress() {
         </p>
       </div>
 
-      <div class="glass-card rounded-3xl p-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <svg class="w-5 h-5 gradient-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <label for="thumbnail-toggle" class="text-sm font-medium text-text-secondary">自动生成缩略图</label>
-          </div>
-          <button
-            id="thumbnail-toggle"
-            type="button"
-            role="switch"
-            :aria-checked="generateThumbnail"
-            @click="generateThumbnail = !generateThumbnail"
-            :class="[
-              'relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2',
-              generateThumbnail ? 'gradient-btn' : 'bg-surface-elevated'
-            ]"
-          >
-            <span
-              :class="[
-                'pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                generateThumbnail ? 'translate-x-5' : 'translate-x-0'
-              ]"
-            />
-          </button>
-        </div>
-      </div>
-
-      <DropZone @files="handleFiles" class="mt-5" />
+      <DropZone @files="handleFiles" />
 
       <div v-if="processing" class="mt-5 glass-card rounded-2xl p-4">
         <div class="flex items-center gap-2 text-sm text-text-secondary">
@@ -99,7 +60,7 @@ function getUploadProgress() {
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <span>媒体处理中...</span>
+          <span>上传中...</span>
         </div>
       </div>
 
@@ -143,11 +104,6 @@ function getUploadProgress() {
             :name="file.name"
             :size="file.size"
             :type="file.type"
-            :has-thumbnail="file.hasThumbnail"
-            :thumbnail-url="file.thumbnailUrl"
-            :thumbnail-width="file.thumbnailWidth"
-            :thumbnail-height="file.thumbnailHeight"
-            :thumbnail-size="file.thumbnailSize"
           />
         </div>
       </div>
