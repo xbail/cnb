@@ -121,32 +121,29 @@ async function signUpload(name: string, size: number): Promise<{ upload_url: str
 }
 
 async function putWithProgress(uploadUrl: string, file: File, onProgress?: (pct: number) => void): Promise<void> {
-  if (onProgress && typeof XMLHttpRequest !== 'undefined') {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', `${API_BASE}/upload/put?upload_url=${encodeURIComponent(uploadUrl)}`)
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          onProgress(Math.round((e.loaded / e.total) * 100))
-        }
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', uploadUrl)
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream')
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100))
       }
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) resolve()
-        else reject(new Error(`上传失败: ${xhr.status}`))
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      else {
+        let detail = ''
+        try {
+          const data = JSON.parse(xhr.responseText)
+          detail = data.msg || data.data?.msg || data.message || ''
+        } catch {}
+        reject(new Error(`上传失败: ${xhr.status}${detail ? ' - ' + detail : ''}`))
       }
-      xhr.onerror = () => reject(new Error('上传失败: 网络错误'))
-      xhr.send(file)
-    })
-  }
-
-  const res = await fetch(`${API_BASE}/upload/put?upload_url=${encodeURIComponent(uploadUrl)}`, {
-    method: 'POST',
-    body: file,
+    }
+    xhr.onerror = () => reject(new Error('上传失败: 网络错误(可能是跨域限制)'))
+    xhr.send(file)
   })
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    throw new Error(`上传失败: ${res.status} ${errText}`)
-  }
 }
 
 export function useUpload() {
@@ -196,7 +193,7 @@ export function useUpload() {
       progress.value = 10
       await putWithProgress(sign.upload_url, uploadFile, (pct) => {
         progress.value = 10 + Math.round(pct * 0.85)
-      })
+      }) 
 
       progress.value = 95
 
