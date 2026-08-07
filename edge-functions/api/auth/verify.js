@@ -1,5 +1,5 @@
 export async function onRequestPost(context) {
-  const uploadPassword = process.env.UPLOAD_PASSWORD
+  const uploadPassword = context.env.UPLOAD_PASSWORD
 
   if (!uploadPassword) {
     return json({ code: 400, msg: 'server password not configured' }, 400)

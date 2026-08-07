@@ -8,7 +8,7 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const result = await signUpload({ fileName, fileSize })
+    const result = await signUpload(context.env, { fileName, fileSize })
     return json({ code: 0, msg: 'ok', data: result })
   } catch (e) {
     const message = e && e.message ? e.message : 'unknown error'
@@ -28,10 +28,10 @@ function sanitizeFileName(fileName) {
   return ext ? randomName + '.' + ext : randomName
 }
 
-async function signUpload({ fileName, fileSize }) {
+async function signUpload(env, { fileName, fileSize }) {
   const type = getUploadType(fileName)
   const safeFileName = sanitizeFileName(fileName)
-  const slugImg = process.env.SLUG_IMG || 'wujinpai/cnbimg'
+  const slugImg = env.SLUG_IMG || 'wujinpai/cnbimg'
   const metaUrl = 'https://api.cnb.cool/' + slugImg + '/-/upload/' + type
 
   const controller = new AbortController()
@@ -42,7 +42,7 @@ async function signUpload({ fileName, fileSize }) {
       method: 'POST',
       signal: controller.signal,
       headers: {
-        Authorization: 'Bearer ' + (process.env.TOKEN_IMG || ''),
+        Authorization: 'Bearer ' + (env.TOKEN_IMG || ''),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ name: safeFileName, size: fileSize }),
