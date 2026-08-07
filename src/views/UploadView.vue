@@ -54,7 +54,7 @@ function getUploadProgress() {
           <span class="w-2 h-2 rounded-full gradient-btn"></span>
           永久存储 · 直链分享 · 视频可播
         </div>
-        <h1 class="text-4xl sm:text-5xl font-bold gradient-text tracking-tight">CNB 图床</h1>
+        <h1 class="text-4xl sm:text-5xl font-bold gradient-text tracking-tight">CNB 小网盘</h1>
         <p class="text-text-secondary mt-4 text-base leading-relaxed">
           上传图片、视频或音频，获取永久直链，随处分享
         </p>
@@ -183,8 +183,8 @@ function getUploadProgress() {
               <p class="text-xs text-text-secondary">获取上传签名，返回 <code class="font-mono">upload_url</code>（含随机重命名的文件名）</p>
             </div>
             <div>
-              <p class="font-mono text-xs text-accent mb-1">PUT &lt;签名返回的 upload_url&gt;</p>
-              <p class="text-xs text-text-secondary">浏览器直传文件二进制到 CNB 对象存储（Content-Type: application/octet-stream），不经过本站服务器，无 1MB 限制</p>
+              <p class="font-mono text-xs text-accent mb-1">POST /api/upload/put?upload_url=&lt;签名返回的URL&gt;</p>
+              <p class="text-xs text-text-secondary">浏览器上传文件二进制到本站，由服务端转发至 CNB 对象存储（Content-Type: application/octet-stream）</p>
             </div>
             <div>
               <p class="font-mono text-xs text-accent mb-1">GET /api/files</p>
