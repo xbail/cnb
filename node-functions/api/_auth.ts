@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
 
 function getSecret(): string {
   const secret = process.env.UPLOAD_PASSWORD
