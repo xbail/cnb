@@ -237,12 +237,11 @@ export function useUpload() {
 
       progress.value = 30
 
-      console.log('[Upload] Step 2: Uploading to CNB...')
-      const putRes = await fetch(upload_url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/octet-stream' },
-        body: file,
-      })
+      console.log('[Upload] Step 2: Uploading to CNB (via proxy)...')
+      const putRes = await fetch(
+        `${API_BASE}/upload/put?upload_url=${encodeURIComponent(upload_url)}`,
+        { method: 'POST', body: file },
+      )
 
       console.log('[Upload] PUT response status:', putRes.status)
 
@@ -268,11 +267,10 @@ export function useUpload() {
           const thumbSignData = await thumbSignRes.json()
           if (thumbSignData.code === 0) {
             const { upload_url: thumbUploadUrl } = thumbSignData.data
-            const thumbPutRes = await fetch(thumbUploadUrl, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/octet-stream' },
-              body: thumbResult.thumbnailFile,
-            })
+            const thumbPutRes = await fetch(
+              `${API_BASE}/upload/put?upload_url=${encodeURIComponent(thumbUploadUrl)}`,
+              { method: 'POST', body: thumbResult.thumbnailFile },
+            )
 
             if (thumbPutRes.ok) {
               const baseUrl = window.location.origin
@@ -298,11 +296,10 @@ export function useUpload() {
             const thumbSignData = await thumbSignRes.json()
             if (thumbSignData.code === 0) {
               const { upload_url: thumbUploadUrl } = thumbSignData.data
-              const thumbPutRes = await fetch(thumbUploadUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'image/jpeg' },
-                body: thumbnailBlob,
-              })
+              const thumbPutRes = await fetch(
+                `${API_BASE}/upload/put?upload_url=${encodeURIComponent(thumbUploadUrl)}`,
+                { method: 'POST', body: thumbnailBlob },
+              )
 
               if (thumbPutRes.ok) {
                 const baseUrl = window.location.origin
