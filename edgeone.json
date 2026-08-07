@@ -1,8 +1,4 @@
 {
-  "server": {
-    "framework": "express",
-    "entry": "./node-functions/api/index.ts"
-  },
   "routing": [
     {
       "route": "/api/*",
