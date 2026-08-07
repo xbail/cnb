@@ -8,13 +8,8 @@ const emit = defineEmits<{
 const isDragging = ref(false)
 const inputRef = ref<HTMLInputElement>()
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024
-
 function isMediaFile(file: File): boolean {
-  if (file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/')) {
-    return file.size <= MAX_FILE_SIZE
-  }
-  return false
+  return file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/')
 }
 
 function handleDragOver(e: DragEvent) {
@@ -109,7 +104,7 @@ function handleInputChange(e: Event) {
         </div>
 
       <p class="text-text-secondary text-sm font-medium">
-        支持 jpg, png, gif, webp, mp4, mov, mp3 · 单文件最大 <span class="gradient-text font-bold">25MB</span>
+        支持 jpg, png, gif, webp, mp4, mov, mp3 · 单文件大小不限（受 CNB 对象存储限制）
       </p>
     </div>
   </div>
